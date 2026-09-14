@@ -128,7 +128,7 @@ tr:hover{background:#fafafa}
     <div class="row">
       <input id="objName" placeholder="Название объекта (ЖК, дом)">
       <input id="objAddr" placeholder="Адрес">
-      <button class="btn btn-success" onclick="addObject()"> Добавить</button>
+      <button class="btn btn-success" onclick="addObject()">➕ Добавить</button>
     </div>
     <table id="tblObjects"><thead><tr><th>№</th><th>Объект</th><th>Действия</th></tr></thead><tbody></tbody></table>
   </div>
@@ -192,7 +192,7 @@ tr:hover{background:#fafafa}
       <label style="font-weight:600">📸 Фото сломанной детали (до 7 шт, сжатие до 800×600):</label>
       <p class="hint" style="margin-bottom:6px">Нажмите на нужный способ — на телефоне появится выбор камеры или галереи.</p>
       <div class="photo-source-btns">
-        <label for="issPhotosCamera"> Сделать фото<br><small>(камера)</small></label>
+        <label for="issPhotosCamera">📷 Сделать фото<br><small>(камера)</small></label>
         <label for="issPhotosGallery">🖼 Выбрать из галереи<br><small>(файлы)</small></label>
       </div>
       <input type="file" id="issPhotosCamera" accept="image/*" capture="environment" multiple style="display:none">
@@ -266,7 +266,7 @@ tr:hover{background:#fafafa}
     <button class="btn" onclick="importObjEmp()">📥 Загрузить</button>
   </div>
   <div class="card">
-    <h2> Загрузить данные СКЛАДА из Excel</h2>
+    <h2>📥 Загрузить данные СКЛАДА из Excel</h2>
     <p class="hint">Вкладка «Склад»: A — Название, B — № детали, C — В наличии</p>
     <input type="file" id="fileParts" accept=".xlsx,.xls">
     <button class="btn" onclick="importParts()">📥 Загрузить склад</button>
@@ -275,7 +275,7 @@ tr:hover{background:#fafafa}
     <h2>📥 Загрузить данные ВЫДАЧ из Excel</h2>
     <p class="hint">Вкладка «Выдачи»: A-I — Дата, Объект, Корпус, Лифт, Деталь, №, Сотрудник, Статус, Фото</p>
     <input type="file" id="fileStock" accept=".xlsx,.xls">
-    <button class="btn" onclick="importStock()"> Загрузить выдачи</button>
+    <button class="btn" onclick="importStock()">📥 Загрузить выдачи</button>
   </div>
   <div class="card">
     <h2>📤 Выгрузить данные в Excel</h2>
@@ -330,21 +330,26 @@ tr:hover{background:#fafafa}
 
 <script>
 /* ============================================================
-   ДАННЫЕ
+   ДАННЫЕ И ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 ============================================================ */
 let DATA = { objects:[], employees:[], parts:[], issues:[] };
 let pendingPhotos = [];
 let currentObjEdit = null;
 let expandedBuildings = new Set();
 
-// Глобальные переменные для Яндекс.Диска (как в вашем коде)
-let yandexToken = localStorage.getItem('yandex_access_token') || '';
+// Переменные для Яндекс.Диска
+let yandexToken = '';
 const FILE_PATH = '/sklad_data.json';
 const UPLOAD_KEY = 'last_yandex_upload';
+const YANDEX_AUTH_URL = 'https://oauth.yandex.ru/authorize';
+const YANDEX_TOKEN_URL = 'https://oauth.yandex.ru/token';
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 function load(){
+  // ВАЖНО: Загружаем токен ПЕРВЫМ делом!
+  loadYandexToken();
+  
   if (window.APP_DATA_EMBEDDED && typeof window.APP_DATA_EMBEDDED === 'object'){
     DATA = window.APP_DATA_EMBEDDED;
     DATA.objects=DATA.objects||[]; DATA.employees=DATA.employees||[];
@@ -456,7 +461,7 @@ function renderObjModal(){
     '<label>Название</label><input id="om_name" value="'+esc(o.name||'')+'" placeholder="ЖК, дом">'+
     '<label>Адрес</label><input id="om_address" value="'+esc(o.address||'')+'" placeholder="Улица, дом">'+
     '<hr style="margin:12px 0;border:none;border-top:1px solid #eee">'+
-    '<h3 style="font-size:14px;margin-bottom:8px"> Корпуса и лифты</h3>'+
+    '<h3 style="font-size:14px;margin-bottom:8px">🏢 Корпуса и лифты</h3>'+
     '<p class="hint">Нажмите на корпус, чтобы раскрыть его.</p>'+
     '<div class="bld-toolbar">'+
       '<button class="btn btn-sm btn-success" onclick="addBuilding()">➕ Добавить корпус</button>'+
@@ -479,8 +484,8 @@ function renderBuildingsList(){
     html += '<details class="bld-block" '+(isOpen?'open':'')+' data-bid="'+b.id+'" ontoggle="onBuildingToggle(this)">'+
       '<summary onclick="event.stopPropagation()">'+
         '<span class="arrow">▶</span>'+
-        '<span class="bld-title"> <input value="'+esc(b.name||'')+'" placeholder="Название корпуса" oninput="currentObjEdit.buildings['+bi+'].name=this.value" onclick="event.stopPropagation()"></span>'+
-        '<span class="bld-count"> '+liftCount+' '+liftWord+'</span>'+
+        '<span class="bld-title">🏢 <input value="'+esc(b.name||'')+'" placeholder="Название корпуса" oninput="currentObjEdit.buildings['+bi+'].name=this.value" onclick="event.stopPropagation()"></span>'+
+        '<span class="bld-count">🛗 '+liftCount+' '+liftWord+'</span>'+
         '<button class="bld-del" onclick="event.stopPropagation();removeBuilding('+bi+')">🗑</button>'+
       '</summary><div class="bld-content">';
     if(liftCount===0) html += '<p class="hint">Лифты не добавлены</p>';
@@ -764,7 +769,7 @@ function renderIssues(){
       '<td>'+esc(p?p.name:'?')+'</td><td>'+esc(p&&p.partNumber?p.partNumber:'')+'</td>'+
       '<td>'+esc(e?e.name:'?')+'</td><td style="font-size:12px">'+liftText+'</td>'+
       '<td>'+statusLabel(iss.status)+'</td>'+
-      '<td><div class="issue-photos">'+(ph||'—')+'</div>'+(ph?'<button class="btn btn-sm" onclick="downloadIssuePhotos(\''+iss.id+'\')" style="margin-top:4px"></button>':'')+'</td>'+
+      '<td><div class="issue-photos">'+(ph||'—')+'</div>'+(ph?'<button class="btn btn-sm" onclick="downloadIssuePhotos(\''+iss.id+'\')" style="margin-top:4px">💾</button>':'')+'</td>'+
       '<td><button class="btn btn-sm btn-danger" onclick="delIssue(\''+iss.id+'\')">🗑</button></td>';
     tb.appendChild(tr);
   });
@@ -942,19 +947,20 @@ function saveToFile(){
   const status = document.getElementById('saveStatus');
   if (status){
     const photoCount = DATA.issues.reduce(function(s,i){return s+(i.photos?i.photos.length:0);},0);
-    status.innerHTML = '✅ Файл сохранён!<br> Объектов: <b>'+DATA.objects.length+'</b> · Сотрудников: <b>'+DATA.employees.length+'</b> · Выдач: <b>'+DATA.issues.length+'</b> · Фото: <b>'+photoCount+'</b>';
+    status.innerHTML = '✅ Файл сохранён!<br>📊 Объектов: <b>'+DATA.objects.length+'</b> · Сотрудников: <b>'+DATA.employees.length+'</b> · Выдач: <b>'+DATA.issues.length+'</b> · Фото: <b>'+photoCount+'</b>';
     setTimeout(function(){ if(status) status.innerHTML=''; }, 8000);
   }
 }
 function clearAll(){ if(!confirm('Удалить ВСЕ данные?')) return; DATA={objects:[],employees:[],parts:[],issues:[]}; localStorage.removeItem('appData_v5'); render(); }
 
 /* ============================================================
-   ☁️ СИНХРОНИЗАЦИЯ С ЯНДЕКС.ДИСКОМ (ИСПОЛЬЗУЕМ ВАШ КОД)
+   ☁️ СИНХРОНИЗАЦИЯ С ЯНДЕКС.ДИСКОМ (ИСПРАВЛЕННАЯ)
 ============================================================ */
 
-const YANDEX_AUTH_URL = 'https://oauth.yandex.ru/authorize';
-const YANDEX_TOKEN_URL = 'https://oauth.yandex.ru/token';
-const YANDEX_DISK_API = 'https://cloud-api.yandex.net/v1/disk';
+function loadYandexToken(){
+  yandexToken = localStorage.getItem('yandex_access_token') || '';
+  console.log('🔍 loadYandexToken: токен =', yandexToken ? 'Найден (' + yandexToken.length + ' симв.)' : 'Не найден');
+}
 
 function saveYandexSettings(){
   const clientId = document.getElementById('yandexClientId').value.trim();
@@ -977,12 +983,15 @@ function setSyncStatus(type, message){
 
 function updateSyncUI(){
   loadYandexSettingsToForm();
+  loadYandexToken(); // Перезагружаем токен перед обновлением UI
+  
   const actions = document.getElementById('syncActions');
   if (!actions) return;
   
   if (yandexToken){
     actions.style.display = 'block';
-    setSyncStatus('ok', '✅ Подключено к Яндекс.Диску<br><small>Токен: ' + yandexToken.substring(0, 20) + '...</small>');
+    const tokenPreview = yandexToken.substring(0, 15) + '...';
+    setSyncStatus('ok', '✅ Подключено к Яндекс.Диску<br><small>Токен: ' + tokenPreview + '</small>');
   } else {
     actions.style.display = 'none';
     setSyncStatus('info', '⏳ Не подключено. Нажмите «Авторизоваться через Яндекс»');
@@ -1020,7 +1029,8 @@ async function startYandexAuth(){
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   
   localStorage.setItem('yandex_code_verifier', codeVerifier);
-  localStorage.setItem('yandex_state', Math.random().toString(36).slice(2));
+  const state = Math.random().toString(36).slice(2);
+  localStorage.setItem('yandex_state', state);
   
   const authUrl = YANDEX_AUTH_URL + '?' + new URLSearchParams({
     response_type: 'code',
@@ -1028,7 +1038,7 @@ async function startYandexAuth(){
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     redirect_uri: redirectUri,
-    state: localStorage.getItem('yandex_state'),
+    state: state,
     force_confirm: 'yes'
   }).toString();
   
@@ -1041,7 +1051,7 @@ async function exchangeCodeForToken(code){
   const codeVerifier = localStorage.getItem('yandex_code_verifier');
   
   if (!codeVerifier){
-    alert('❌ Ошибка: code_verifier не найден');
+    alert('❌ Ошибка: code_verifier не найден. Попробуйте авторизоваться снова.');
     return;
   }
   
@@ -1064,18 +1074,21 @@ async function exchangeCodeForToken(code){
     
     if (data.access_token){
       yandexToken = data.access_token;
+      
+      // Сохраняем в localStorage
       localStorage.setItem('yandex_access_token', yandexToken);
       localStorage.setItem('yandex_refresh_token', data.refresh_token || '');
       localStorage.setItem('yandex_token_expires', (Date.now() + (data.expires_in || 3600) * 1000).toString());
       
+      // Очищаем временные данные
       localStorage.removeItem('yandex_code_verifier');
       localStorage.removeItem('yandex_state');
       
       setSyncStatus('ok', '✅ Авторизация успешна!');
       updateSyncUI();
-      alert('✅ Авторизация прошла успешно!');
+      alert('✅ Авторизация прошла успешно!\n\nТокен сохранён.');
     } else {
-      alert(' Ошибка: ' + (data.error_description || data.error));
+      alert('❌ Ошибка: ' + (data.error_description || data.error || 'неизвестно'));
     }
   } catch(err){
     alert('❌ Ошибка сети: ' + err.message);
@@ -1107,38 +1120,33 @@ function applyManualToken(){
   updateSyncUI();
 }
 
-// ВАШ КОД ЗАГРУЗКИ (адаптированный под наши данные)
+// ЗАГРУЗКА НА ЯНДЕКС.ДИСК (адаптировано под ваши данные)
 async function uploadToYandex() {
-  // Проверяем, что пользователь подключён к Яндекс.Диску
   if (!yandexToken) { 
-    alert('Подключите Яндекс.Диск'); 
+    alert('❌ Не авторизованы!\n\nПожалуйста, нажмите «Авторизоваться через Яндекс».'); 
     return; 
   }
   
-  // Меняем текст кнопки на "Загрузка..." и блокируем её
   const btn = document.getElementById('btnUpload');
   const original = btn.textContent;
-  btn.textContent = ' Загрузка...';
+  btn.textContent = '⏳ Загрузка...';
   btn.disabled = true;
   
   try {
-    // ШАГ 1: Запрашиваем у Яндекс.Диска URL для загрузки файла
     const uploadUrl = `https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(FILE_PATH)}&overwrite=true`;
     
     const resp = await fetch(uploadUrl, {
       headers: { 
-        'Authorization': `OAuth ${yandexToken}`,  // Токен авторизации
+        'Authorization': `OAuth ${yandexToken}`,
         'Accept': 'application/json' 
       }
     });
     
-    // Если ошибка — выбрасываем исключение
-    if (!resp.ok) throw new Error(`Ошибка: ${resp.status}`);
+    if (!resp.ok) throw new Error(`Ошибка получения ссылки: ${resp.status}`);
     
     const data = await resp.json();
-    // data.href — это временный URL, куда нужно отправить файл
+    if (!data.href) throw new Error('Яндекс не вернул ссылку для загрузки');
     
-    // ШАГ 2: Формируем данные для отправки (наши данные)
     const payload = { 
       objects: DATA.objects,
       employees: DATA.employees,
@@ -1147,35 +1155,31 @@ async function uploadToYandex() {
       lastSync: new Date().toISOString() 
     };
     
-    // Превращаем данные в JSON и создаём Blob (файл в памяти)
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     
-    // ШАГ 3: Отправляем файл на Яндекс.Диск по полученному URL
     const uploadResp = await fetch(data.href, { method: 'PUT', body: blob });
     
     if (!uploadResp.ok) throw new Error(`HTTP ${uploadResp.status}`);
     
-    // ШАГ 4: Сохраняем время последней загрузки
     localStorage.setItem(UPLOAD_KEY, new Date().toISOString());
     
     const log = document.getElementById('syncLog');
     if (log) log.textContent = '✅ Файл загружен (' + new Date().toLocaleString('ru-RU') + ')';
     
-    alert('✅ Загружено на Яндекс.Диск!\n\nФайл: /sklad_data.json\nРазмер: ' + Math.round(blob.size / 1024) + ' КБ');
+    alert('✅ Загружено на Яндекс.Диск!\n\nФайл: ' + FILE_PATH + '\nРазмер: ' + Math.round(blob.size / 1024) + ' КБ');
     
   } catch (e) {
     alert('❌ Ошибка: ' + e.message);
   } finally {
-    // Возвращаем кнопке исходный вид
     btn.textContent = original;
     btn.disabled = false;
   }
 }
 
-// СКАЧИВАНИЕ (аналогично вашему коду)
+// СКАЧИВАНИЕ С ЯНДЕКС.ДИСКА
 async function downloadFromYandex(){
   if (!yandexToken) { 
-    alert('Подключите Яндекс.Диск'); 
+    alert('❌ Не авторизованы!\n\nПожалуйста, нажмите «Авторизоваться через Яндекс».'); 
     return; 
   }
   
@@ -1183,17 +1187,14 @@ async function downloadFromYandex(){
   
   const btn = document.getElementById('btnDownload');
   const original = btn.textContent;
-  btn.textContent = ' Скачивание...';
+  btn.textContent = '⏳ Скачивание...';
   btn.disabled = true;
   
   try {
-    // ШАГ 1: Получаем ссылку для скачивания
     const downloadUrl = `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(FILE_PATH)}`;
     
     const resp = await fetch(downloadUrl, {
-      headers: { 
-        'Authorization': `OAuth ${yandexToken}`
-      }
+      headers: { 'Authorization': `OAuth ${yandexToken}` }
     });
     
     if (!resp.ok){
@@ -1204,14 +1205,13 @@ async function downloadFromYandex(){
     }
     
     const data = await resp.json();
+    if (!data.href) throw new Error('Яндекс не вернул ссылку для скачивания');
     
-    // ШАГ 2: Скачиваем файл
     const fileResp = await fetch(data.href);
     if (!fileResp.ok) throw new Error(`HTTP ${fileResp.status}`);
     
     const jsonData = await fileResp.json();
     
-    // ШАГ 3: Проверяем структуру и загружаем данные
     if (!jsonData.objects || !jsonData.employees || !jsonData.parts || !jsonData.issues){
       throw new Error('Неверная структура файла');
     }
@@ -1244,7 +1244,7 @@ async function downloadFromYandex(){
 }
 
 async function syncBothWays(){
-  if (!yandexToken) { alert('Подключите Яндекс.Диск'); return; }
+  if (!yandexToken) { alert('❌ Подключите Яндекс.Диск'); return; }
   if (!confirm('Выполнить двустороннюю синхронизацию?')) return;
   const log = document.getElementById('syncLog');
   if (log) log.textContent = '🔄 Начинаю...';
@@ -1260,7 +1260,8 @@ function checkAuthCallback(){
   const error = urlParams.get('error');
   
   if (code){
-    if (!state || state === localStorage.getItem('yandex_state')){
+    const savedState = localStorage.getItem('yandex_state');
+    if (!state || state === savedState){
       exchangeCodeForToken(code);
       const newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
