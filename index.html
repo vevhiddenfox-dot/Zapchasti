@@ -1,3 +1,947 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Учёт выдачи запчастей на объект</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script id="app-data-embed">window.APP_DATA_EMBEDDED=null;</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#222;font-size:14px;padding-bottom:70px}
+header{background:#1976d2;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+header h1{font-size:18px;font-weight:600}
+nav{display:flex;background:#fff;border-bottom:1px solid #ddd;overflow-x:auto;position:sticky;top:48px;z-index:99}
+nav button{flex:0 0 auto;padding:12px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:#555;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.active{color:#1976d2;border-bottom-color:#1976d2;font-weight:600}
+main{padding:12px;max-width:1200px;margin:0 auto}
+.card{background:#fff;border-radius:8px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{font-size:16px;margin-bottom:10px;color:#1976d2}
+.btn{display:inline-block;padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:14px;background:#1976d2;color:#fff;margin:3px;transition:.2s}
+.btn:hover{background:#1565c0}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{background:#d32f2f}.btn-danger:hover{background:#b71c1c}
+.btn-success{background:#388e3c}.btn-success:hover{background:#2e7d32}
+.btn-warn{background:#f57c00}.btn-warn:hover{background:#ef6c00}
+.btn-yandex{background:#fc3f1d;color:#fff}.btn-yandex:hover{background:#e63215}
+.btn-ghost{background:#f0f0f0;color:#333}.btn-ghost:hover{background:#e0e0e0}
+input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin:4px 0;font-family:inherit}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #eee;vertical-align:top}
+th{background:#f5f5f5;font-weight:600;position:sticky;top:0}
+tr:hover{background:#fafafa}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1;min-width:120px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-ok{background:#c8e6c9;color:#2e7d32}
+.badge-no{background:#ffcdd2;color:#c62828}
+.badge-wait{background:#fff9c4;color:#f57f17}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:12px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:10px;padding:18px;max-width:650px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:12px;color:#1976d2}
+.empty{text-align:center;color:#888;padding:20px;font-style:italic}
+.hint{font-size:12px;color:#666;margin:6px 0;line-height:1.5}
+.thumb-preview{width:80px;height:80px;object-fit:cover;border-radius:6px;margin:4px;position:relative;display:inline-block}
+.thumb-preview img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.thumb-preview .rm{position:absolute;top:-6px;right:-6px;background:#d32f2f;color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1}
+.photo-view{max-width:100%;max-height:70vh;border-radius:8px}
+.issue-photos{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.issue-photos img{width:50px;height:50px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid #ccc}
+.obj-row{cursor:pointer;transition:.15s}
+.obj-row:hover{background:#e3f2fd !important}
+.obj-main{font-weight:600;font-size:14px}
+.obj-sub{font-size:12px;color:#555;margin-top:2px}
+.bld-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.bld-block{border:1px solid #e0e0e0;border-radius:8px;margin:6px 0;background:#fafafa;overflow:hidden}
+.bld-block summary{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;user-select:none;background:#fff;border-left:4px solid #1976d2;transition:background .15s}
+.bld-block summary::-webkit-details-marker{display:none}
+.bld-block summary:hover{background:#f5f9ff}
+.bld-block[open] summary{background:#e3f2fd;border-left-color:#0d47a1}
+.bld-block summary .arrow{display:inline-block;width:18px;height:18px;flex-shrink:0;transition:transform .2s;background:#1976d2;color:#fff;border-radius:50%;text-align:center;line-height:18px;font-size:11px;font-weight:700}
+.bld-block[open] summary .arrow{transform:rotate(90deg)}
+.bld-block summary .bld-title{flex:1;font-weight:600;font-size:13px;color:#1976d2}
+.bld-block summary .bld-title input{font-weight:600;color:#1976d2;background:transparent;border:none;padding:2px 4px;margin:0;border-bottom:1px dashed transparent}
+.bld-block summary .bld-title input:focus{border-bottom-color:#1976d2;background:#fff}
+.bld-block summary .bld-count{font-size:11px;background:#1976d2;color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.bld-block summary .bld-del{background:none;border:none;cursor:pointer;font-size:16px;color:#d32f2f;padding:2px 6px}
+.bld-block summary .bld-del:hover{background:#ffebee;border-radius:4px}
+.bld-content{padding:10px 12px;border-top:1px solid #eee;background:#fafafa}
+.lift-row{display:flex;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid #eee}
+.lift-row:last-child{border-bottom:none}
+.lift-row input{flex:1;margin:0}
+.upload-step{display:flex;align-items:flex-start;gap:12px;padding:10px;background:#f9f9f9;border-radius:6px;margin:6px 0}
+.upload-step .num{background:#1976d2;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600;font-size:12px}
+.upload-step .text{flex:1;font-size:13px}
+.photo-source-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.photo-source-btns label{flex:1;min-width:120px;text-align:center;padding:10px;background:#e3f2fd;color:#1976d2;border:2px solid #1976d2;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:.15s}
+.photo-source-btns label:hover{background:#bbdefb}
+.photo-source-btns label:active{background:#90caf9}
+.emp-object-info{font-size:12px;color:#1976d2;margin-top:4px;padding:6px;background:#e3f2fd;border-radius:4px;display:none}
+.emp-object-info.show{display:block}
+.sync-status{padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
+.sync-status.ok{background:#c8e6c9;color:#2e7d32;border:1px solid #81c784}
+.sync-status.err{background:#ffcdd2;color:#c62828;border:1px solid #e57373}
+.sync-status.info{background:#e3f2fd;color:#1565c0;border:1px solid #64b5f6}
+.sync-status.wait{background:#fff9c4;color:#f57f17;border:1px solid #ffd54f}
+.yandex-settings{background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:10px;margin:10px 0}
+.yandex-settings h4{color:#f57c00;margin-bottom:6px;font-size:14px}
+@media(max-width:600px){
+  body{font-size:13px}
+  header h1{font-size:16px}
+  nav button{padding:10px 12px;font-size:13px}
+  .btn{padding:7px 10px;font-size:13px}
+  table{font-size:12px}
+  th,td{padding:6px 4px}
+  .row{flex-direction:column}
+  .row>*{width:100%}
+  .lift-row{flex-direction:column}
+  .lift-row input{width:100%}
+  .bld-block summary{padding:8px 10px}
+  .bld-block summary .bld-title input{font-size:13px}
+  .photo-source-btns label{min-width:0}
+}
+</style>
+</head>
+<body>
+
+<header><h1>📋 Учёт выдачи запчастей на объект</h1></header>
+
+<nav id="nav">
+  <button data-tab="objects" class="active">🏢 Объекты</button>
+  <button data-tab="employees"> Сотрудники</button>
+  <button data-tab="links">🔗 Привязки</button>
+  <button data-tab="parts">🔧 Склад</button>
+  <button data-tab="issues">📦 Выдачи</button>
+  <button data-tab="sync">☁️ Синхронизация</button>
+  <button data-tab="io">📥 Импорт/Экспорт</button>
+</nav>
+
+<main>
+
+<section id="tab-objects" class="tab">
+  <div class="card">
+    <h2>Объекты</h2>
+    <p class="hint">Добавьте объект (название + адрес). Затем нажмите на него, чтобы добавить корпуса и лифты.</p>
+    <div class="row">
+      <input id="objName" placeholder="Название объекта (ЖК, дом)">
+      <input id="objAddr" placeholder="Адрес">
+      <button class="btn btn-success" onclick="addObject()">➕ Добавить</button>
+    </div>
+    <table id="tblObjects"><thead><tr><th>№</th><th>Объект</th><th>Действия</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="tab-employees" class="tab" style="display:none">
+  <div class="card">
+    <h2>Сотрудники</h2>
+    <div class="row">
+      <input id="empName" placeholder="ФИО сотрудника">
+      <input id="empPos" placeholder="Должность (необязательно)">
+      <button class="btn btn-success" onclick="addEmployee()">➕ Добавить</button>
+    </div>
+    <table id="tblEmployees"><thead><tr><th>№</th><th>ФИО</th><th>Должность</th><th>Объект</th><th>Действия</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="tab-links" class="tab" style="display:none">
+  <div class="card">
+    <h2>Привязка сотрудников к объектам</h2>
+    <p class="hint">Сотрудник привязывается к объекту. Перепривязка автоматически открепит его от предыдущего.</p>
+    <div class="row">
+      <select id="linkEmp"></select>
+      <select id="linkObj"></select>
+      <button class="btn btn-success" onclick="setLink()"> Привязать / Перепривязать</button>
+    </div>
+    <table id="tblLinks"><thead><tr><th>Сотрудник</th><th>Объект</th><th>Действия</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="tab-parts" class="tab" style="display:none">
+  <div class="card">
+    <h2>Склад запчастей</h2>
+    <div class="row">
+      <input id="partName" placeholder="Название детали">
+      <input id="partNumber" placeholder="Номер детали">
+      <input id="partQty" type="number" min="0" value="1" placeholder="Кол-во">
+      <button class="btn btn-success" onclick="addPart()">➕ Добавить</button>
+    </div>
+    <table id="tblParts"><thead><tr><th>Название</th><th>№ детали</th><th>В наличии</th><th>Действия</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="tab-issues" class="tab" style="display:none">
+  <div class="card">
+    <h2>Выдача запчастей</h2>
+    <div class="row">
+      <select id="issPart"></select>
+      <select id="issEmp"></select>
+    </div>
+    <div id="empObjectInfo" class="emp-object-info"></div>
+    <div class="row">
+      <select id="issLift"></select>
+      <select id="issStatus">
+        <option value="returned">✅ Вернул сломанную</option>
+        <option value="not_returned"> Не вернул сломанную</option>
+        <option value="no_broken">⚪ Не было сломанной</option>
+      </select>
+    </div>
+    <div style="margin-top:10px">
+      <label style="font-weight:600">📸 Фото сломанной детали (до 7 шт, сжатие до 800×600):</label>
+      <p class="hint" style="margin-bottom:6px">Нажмите на нужный способ — на телефоне появится выбор камеры или галереи.</p>
+      <div class="photo-source-btns">
+        <label for="issPhotosCamera">📷 Сделать фото<br><small>(камера)</small></label>
+        <label for="issPhotosGallery">🖼 Выбрать из галереи<br><small>(файлы)</small></label>
+      </div>
+      <input type="file" id="issPhotosCamera" accept="image/*" capture="environment" multiple style="display:none">
+      <input type="file" id="issPhotosGallery" accept="image/*" multiple style="display:none">
+      <div id="photoPreview" style="margin-top:6px"></div>
+    </div>
+    <button class="btn btn-success" onclick="addIssue()" style="margin-top:8px"> Выдать</button>
+    <table id="tblIssues" style="margin-top:14px">
+      <thead><tr><th>Дата</th><th>Деталь</th><th>№</th><th>Сотрудник</th><th>Лифт</th><th>Статус</th><th>Фото</th><th>Действия</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="tab-sync" class="tab" style="display:none">
+  <div class="card">
+    <h2>☁️ Синхронизация с Яндекс.Диском</h2>
+    <p class="hint">Данные синхронизируются в файл <b>sklad_data.json</b> в корне вашего Яндекс.Диска. Используется OAuth 2.0 (PKCE) + REST API.</p>
+    <div id="syncStatusBox" class="sync-status info">⏳ Статус: не подключено</div>
+    <div class="yandex-settings">
+      <h4>️ Настройки подключения</h4>
+      <p class="hint">Убедитесь, что в настройках приложения на <a href="https://oauth.yandex.ru/" target="_blank">oauth.yandex.ru</a> указан точно такой же <b>Redirect URI</b>:<br><code>https://vevhiddenfox-dot.github.io/Zapchasti/</code></p>
+      <label>Client ID приложения:</label>
+      <input id="yandexClientId" placeholder="Вставьте Client ID из Яндекс.OAuth">
+      <label>Redirect URI:</label>
+      <input id="yandexRedirectUri" placeholder="https://vevhiddenfox-dot.github.io/Zapchasti/">
+      <button class="btn" onclick="saveYandexSettings()">💾 Сохранить настройки</button>
+    </div>
+    <div style="margin-top:12px">
+      <h3 style="font-size:14px;margin-bottom:8px">🔐 Авторизация</h3>
+      <button class="btn btn-yandex" onclick="startYandexAuth()">🔑 Авторизоваться через Яндекс</button>
+      <button class="btn btn-ghost" onclick="showManualToken()">📝 Ввести токен вручную</button>
+      <button class="btn btn-danger btn-sm" onclick="logoutYandex()">🚪 Выйти</button>
+      <div id="manualTokenBlock" style="display:none;margin-top:10px">
+        <p class="hint">Если автоматическая авторизация не сработала, скопируйте токен из адресной строки после авторизации (параметр <code>access_token=...</code>) и вставьте его сюда:</p>
+        <label>Access Token:</label>
+        <input id="manualToken" placeholder="Вставьте access_token">
+        <button class="btn btn-sm" onclick="applyManualToken()">Применить токен</button>
+      </div>
+    </div>
+    <div style="margin-top:14px" id="syncActions">
+      <h3 style="font-size:14px;margin-bottom:8px">🔄 Синхронизация данных</h3>
+      <p class="hint">Файл: <b>/sklad_data.json</b> в корне Яндекс.Диска</p>
+      <button class="btn btn-success" onclick="uploadToYandex()">️ Загрузить на Яндекс.Диск</button>
+      <button class="btn btn-warn" onclick="downloadFromYandex()">⬇️ Скачать с Яндекс.Диска</button>
+      <button class="btn btn-ghost" onclick="syncBothWays()">🔄 Двусторонняя синхронизация</button>
+      <p class="hint" id="syncLog" style="margin-top:8px"></p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>📋 Инструкция по настройке в Яндекс.OAuth</h2>
+    <div class="upload-step"><div class="num">1</div><div class="text">Зайдите на <a href="https://oauth.yandex.ru/" target="_blank">oauth.yandex.ru</a> и откройте ваше приложение</div></div>
+    <div class="upload-step"><div class="num">2</div><div class="text">Платформа: <b>Веб-сервисы</b></div></div>
+    <div class="upload-step"><div class="num">3</div><div class="text">Redirect URI: <code>https://vevhiddenfox-dot.github.io/Zapchasti/</code></div></div>
+    <div class="upload-step"><div class="num">4</div><div class="text">Доступы: <b>Яндекс.Диск REST API</b> → отметьте <code>cloud_api:disk.read</code> и <code>cloud_api:disk.write</code></div></div>
+    <div class="upload-step"><div class="num">5</div><div class="text">Нажмите «Авторизоваться через Яндекс» выше и разрешите доступ</div></div>
+  </div>
+</section>
+
+<section id="tab-io" class="tab" style="display:none">
+  <div class="card">
+    <h2>💾 Сохранение программы с данными</h2>
+    <p class="hint">Скачается HTML-файл, в который вшиты все текущие данные и фото.</p>
+    <button class="btn btn-success" onclick="saveToFile()">💾 Сохранить файл с данными</button>
+    <p class="hint" id="saveStatus" style="margin-top:8px;color:#388e3c"></p>
+  </div>
+  <div class="card">
+    <h2>📥 Загрузить объекты и сотрудников из Excel</h2>
+    <p class="hint">Файл с двумя листами: Лист 1 «Объекты», Лист 2 «Сотрудники»</p>
+    <input type="file" id="fileObjEmp" accept=".xlsx,.xls">
+    <button class="btn" onclick="importObjEmp()">📥 Загрузить</button>
+  </div>
+  <div class="card">
+    <h2> Загрузить данные СКЛАДА из Excel</h2>
+    <p class="hint">Вкладка «Склад»: A — Название, B — № детали, C — В наличии</p>
+    <input type="file" id="fileParts" accept=".xlsx,.xls">
+    <button class="btn" onclick="importParts()">📥 Загрузить склад</button>
+  </div>
+  <div class="card">
+    <h2>📥 Загрузить данные ВЫДАЧ из Excel</h2>
+    <p class="hint">Вкладка «Выдачи»: A-I — Дата, Объект, Корпус, Лифт, Деталь, №, Сотрудник, Статус, Фото</p>
+    <input type="file" id="fileStock" accept=".xlsx,.xls">
+    <button class="btn" onclick="importStock()">📥 Загрузить выдачи</button>
+  </div>
+  <div class="card">
+    <h2>📤 Выгрузить данные в Excel</h2>
+    <button class="btn btn-warn" onclick="exportAll()">📤 Выгрузить Excel</button>
+  </div>
+  <div class="card">
+    <h2> Загрузка фото на Яндекс.Диск</h2>
+    <p class="hint">Папка: <b>disk.yandex.ru/client/disk/Склад</b></p>
+    <button class="btn btn-yandex" onclick="uploadToYandexDisk()">📤 Загрузить фото на Яндекс.Диск</button>
+    <div style="margin-top:10px">
+      <button class="btn" onclick="window.open('https://disk.yandex.ru/client/disk/%D0%A1%D0%BA%D0%BB%D0%B0%D0%B4','_blank')">📂 Открыть папку «Склад»</button>
+      <button class="btn" onclick="downloadAllPhotos()">💾 Скачать все фото (ZIP)</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>⚠️ Очистка</h2>
+    <button class="btn btn-danger" onclick="clearAll()"> Удалить все данные</button>
+  </div>
+</section>
+
+</main>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Редактирование</h3>
+    <div id="modalBody"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn btn-success" onclick="saveModal()">Сохранить</button>
+      <button class="btn btn-danger" onclick="closeModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="objModal">
+  <div class="modal">
+    <h3 id="objModalTitle">Объект</h3>
+    <div id="objModalBody"></div>
+    <div style="margin-top:14px">
+      <button class="btn btn-success" onclick="saveObjModal()">💾 Сохранить</button>
+      <button class="btn btn-danger" onclick="closeObjModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="photoModal" onclick="closePhotoModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="text-align:center">
+    <h3>Фото сломанной детали</h3>
+    <img id="photoView" class="photo-view">
+    <div style="margin-top:12px"><button class="btn" onclick="closePhotoModal()">Закрыть</button></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ДАННЫЕ
+============================================================ */
+let DATA = { objects:[], employees:[], parts:[], issues:[] };
+let pendingPhotos = [];
+let currentObjEdit = null;
+let expandedBuildings = new Set();
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function load(){
+  if (window.APP_DATA_EMBEDDED && typeof window.APP_DATA_EMBEDDED === 'object'){
+    DATA = window.APP_DATA_EMBEDDED;
+    DATA.objects=DATA.objects||[]; DATA.employees=DATA.employees||[];
+    DATA.parts=DATA.parts||[]; DATA.issues=DATA.issues||[];
+    migrate();
+    return;
+  }
+  const s = localStorage.getItem('appData_v5');
+  if(s) try{ DATA=JSON.parse(s); }catch(e){}
+  migrate();
+}
+
+function migrate(){
+  DATA.objects.forEach(function(o){
+    if(o.address===undefined) o.address=o.addr||'';
+    delete o.addr;
+    if(!Array.isArray(o.buildings)) o.buildings=[];
+    if(o.lifts!==undefined || o.korpus!==undefined){
+      const oldKorpus = o.korpus||'';
+      const oldLifts = Array.isArray(o.lifts)?o.lifts:[];
+      if(oldKorpus || oldLifts.length){
+        let b = o.buildings.find(function(x){return x.name===oldKorpus;});
+        if(!b){ b={id:uid(),name:oldKorpus,lifts:[]}; o.buildings.push(b); }
+        oldLifts.forEach(function(l){
+          if(!b.lifts.some(function(x){return x.liftName===l.liftName&&x.liftNumber===l.liftNumber;})){
+            b.lifts.push({id:l.id||uid(), liftName:l.liftName||'', liftNumber:l.liftNumber||''});
+          }
+        });
+      }
+      delete o.korpus; delete o.lifts;
+    }
+    o.buildings.forEach(function(b){
+      if(!b.id) b.id=uid();
+      if(!Array.isArray(b.lifts)) b.lifts=[];
+      b.lifts.forEach(function(l){ if(!l.id) l.id=uid(); });
+    });
+  });
+  DATA.parts.forEach(function(p){ if(p.partNumber===undefined) p.partNumber=''; });
+  DATA.issues.forEach(function(i){ if(!i.photos) i.photos=[]; if(i.liftId===undefined) i.liftId=null; });
+}
+
+function save(){
+  try{ localStorage.setItem('appData_v5',JSON.stringify(DATA)); }
+  catch(e){ alert('Не удалось сохранить. Используйте «Сохранить файл с данными».'); }
+}
+
+/* ============================================================
+   НАВИГАЦИЯ
+============================================================ */
+document.getElementById('nav').addEventListener('click',function(e){
+  if(e.target.tagName!=='BUTTON') return;
+  document.querySelectorAll('#nav button').forEach(function(b){b.classList.remove('active');});
+  e.target.classList.add('active');
+  document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
+  document.getElementById('tab-'+e.target.dataset.tab).style.display='block';
+});
+
+/* ============================================================
+   ВСПОМОГАТЕЛЬНЫЕ
+============================================================ */
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function objShortLabel(o){ if(!o) return ''; const p=[]; if(o.name) p.push(o.name); if(o.address) p.push(o.address); return p.join(', '); }
+function countLifts(o){ return (o.buildings||[]).reduce(function(s,b){return s+b.lifts.length;},0); }
+function findLift(liftId){
+  for(var i=0;i<DATA.objects.length;i++){
+    var o=DATA.objects[i];
+    for(var j=0;j<(o.buildings||[]).length;j++){
+      var b=o.buildings[j];
+      for(var k=0;k<b.lifts.length;k++){
+        if(b.lifts[k].id===liftId) return {lift:b.lifts[k], building:b, object:o};
+      }
+    }
+  }
+  return null;
+}
+function liftLabel(lift, building, obj){
+  const p=[];
+  if(obj) p.push(objShortLabel(obj));
+  if(building&&building.name) p.push('корп. '+building.name);
+  if(lift.liftName) p.push('лифт '+lift.liftName);
+  if(lift.liftNumber) p.push('№ '+lift.liftNumber);
+  return p.join(', ')||'—';
+}
+function getEmpObj(emp){ return DATA.objects.find(function(o){return o.id===emp.objectId;}); }
+
+/* ============================================================
+   ОБЪЕКТЫ
+============================================================ */
+function addObject(){
+  const n=document.getElementById('objName').value.trim();
+  const a=document.getElementById('objAddr').value.trim();
+  if(!n&&!a){ alert('Введите название или адрес'); return; }
+  DATA.objects.push({id:uid(), name:n, address:a, buildings:[]});
+  document.getElementById('objName').value=''; document.getElementById('objAddr').value='';
+  save(); render();
+}
+function openObjDetails(id){
+  const o=DATA.objects.find(function(x){return x.id===id;});
+  if(!o) return;
+  currentObjEdit=JSON.parse(JSON.stringify(o));
+  expandedBuildings.clear();
+  renderObjModal();
+  document.getElementById('objModal').classList.add('show');
+}
+function renderObjModal(){
+  const o=currentObjEdit;
+  document.getElementById('objModalTitle').textContent='Объект: '+(objShortLabel(o)||'—');
+  document.getElementById('objModalBody').innerHTML=
+    '<label>Название</label><input id="om_name" value="'+esc(o.name||'')+'" placeholder="ЖК, дом">'+
+    '<label>Адрес</label><input id="om_address" value="'+esc(o.address||'')+'" placeholder="Улица, дом">'+
+    '<hr style="margin:12px 0;border:none;border-top:1px solid #eee">'+
+    '<h3 style="font-size:14px;margin-bottom:8px"> Корпуса и лифты</h3>'+
+    '<p class="hint">Нажмите на корпус, чтобы раскрыть его.</p>'+
+    '<div class="bld-toolbar">'+
+      '<button class="btn btn-sm btn-success" onclick="addBuilding()">➕ Добавить корпус</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="expandAllBuildings()">⬇ Развернуть все</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="collapseAllBuildings()">⬆ Свернуть все</button>'+
+    '</div><div id="om_buildings"></div>';
+  renderBuildingsList();
+}
+function renderBuildingsList(){
+  const box=document.getElementById('om_buildings');
+  if(!currentObjEdit.buildings.length){
+    box.innerHTML='<p class="hint">Корпуса не добавлены. Нажмите «➕ Добавить корпус».</p>';
+    return;
+  }
+  let html='';
+  currentObjEdit.buildings.forEach(function(b,bi){
+    const isOpen = expandedBuildings.has(b.id);
+    const liftCount = b.lifts.length;
+    const liftWord = liftCount===1?'лифт':(liftCount>=2&&liftCount<=4?'лифта':'лифтов');
+    html += '<details class="bld-block" '+(isOpen?'open':'')+' data-bid="'+b.id+'" ontoggle="onBuildingToggle(this)">'+
+      '<summary onclick="event.stopPropagation()">'+
+        '<span class="arrow">▶</span>'+
+        '<span class="bld-title">🏢 <input value="'+esc(b.name||'')+'" placeholder="Название корпуса" oninput="currentObjEdit.buildings['+bi+'].name=this.value" onclick="event.stopPropagation()"></span>'+
+        '<span class="bld-count">🛗 '+liftCount+' '+liftWord+'</span>'+
+        '<button class="bld-del" onclick="event.stopPropagation();removeBuilding('+bi+')">🗑</button>'+
+      '</summary><div class="bld-content">';
+    if(liftCount===0) html += '<p class="hint">Лифты не добавлены</p>';
+    b.lifts.forEach(function(l,li){
+      html += '<div class="lift-row">'+
+        '<input placeholder="Название (A, B, C)" value="'+esc(l.liftName||'')+'" oninput="currentObjEdit.buildings['+bi+'].lifts['+li+'].liftName=this.value">'+
+        '<input placeholder="Номер лифта" value="'+esc(l.liftNumber||'')+'" oninput="currentObjEdit.buildings['+bi+'].lifts['+li+'].liftNumber=this.value">'+
+        '<button class="btn btn-sm btn-danger" onclick="removeLift('+bi+','+li+')"></button>'+
+      '</div>';
+    });
+    html += '<button class="btn btn-sm" onclick="addLift('+bi+')" style="margin-top:6px">🛗 + Лифт</button></div></details>';
+  });
+  box.innerHTML = html;
+}
+function onBuildingToggle(details){
+  const bid = details.getAttribute('data-bid');
+  if(details.open) expandedBuildings.add(bid); else expandedBuildings.delete(bid);
+}
+function addBuilding(){
+  const newB = {id:uid(), name:'', lifts:[]};
+  currentObjEdit.buildings.push(newB);
+  expandedBuildings.add(newB.id);
+  renderBuildingsList();
+  setTimeout(function(){
+    const details = document.querySelector('details[data-bid="'+newB.id+'"]');
+    if(details){ details.scrollIntoView({behavior:'smooth', block:'center'}); const inp = details.querySelector('.bld-title input'); if(inp) inp.focus(); }
+  },50);
+}
+function removeBuilding(bi){
+  if(!confirm('Удалить корпус и все его лифты?')) return;
+  expandedBuildings.delete(currentObjEdit.buildings[bi].id);
+  currentObjEdit.buildings.splice(bi,1);
+  renderBuildingsList();
+}
+function addLift(bi){
+  currentObjEdit.buildings[bi].lifts.push({id:uid(), liftName:'', liftNumber:''});
+  renderBuildingsList();
+  setTimeout(function(){
+    const details = document.querySelector('details[data-bid="'+currentObjEdit.buildings[bi].id+'"]');
+    if(details){ const inputs = details.querySelectorAll('.lift-row input'); if(inputs.length) inputs[inputs.length-2].focus(); }
+  },50);
+}
+function removeLift(bi,li){ currentObjEdit.buildings[bi].lifts.splice(li,1); renderBuildingsList(); }
+function expandAllBuildings(){ currentObjEdit.buildings.forEach(function(b){expandedBuildings.add(b.id);}); renderBuildingsList(); }
+function collapseAllBuildings(){ expandedBuildings.clear(); renderBuildingsList(); }
+function saveObjModal(){
+  const o=DATA.objects.find(function(x){return x.id===currentObjEdit.id;});
+  if(!o) return;
+  o.name=document.getElementById('om_name').value.trim();
+  o.address=document.getElementById('om_address').value.trim();
+  o.buildings=currentObjEdit.buildings.map(function(b){return {id:b.id, name:b.name, lifts:b.lifts.filter(function(l){return l.liftName||l.liftNumber;})};}).filter(function(b){return b.name||b.lifts.length;});
+  save(); render(); closeObjModal();
+}
+function closeObjModal(){ document.getElementById('objModal').classList.remove('show'); currentObjEdit=null; expandedBuildings.clear(); }
+function delObject(id){
+  if(!confirm('Удалить объект?')) return;
+  DATA.objects=DATA.objects.filter(function(x){return x.id!==id;});
+  DATA.employees.forEach(function(e){ if(e.objectId===id) e.objectId=null; });
+  save(); render();
+}
+function renderObjects(){
+  const tb=document.querySelector('#tblObjects tbody'); tb.innerHTML='';
+  if(!DATA.objects.length){ tb.innerHTML='<tr><td colspan="3" class="empty">Нет объектов</td></tr>'; return; }
+  DATA.objects.forEach(function(o,i){
+    const tr=document.createElement('tr'); tr.className='obj-row';
+    const lc=countLifts(o), bc=o.buildings.length;
+    const sub=[]; if(bc) sub.push('🏢 Корпусов: '+bc); sub.push(' Лифтов: '+lc);
+    tr.innerHTML='<td>'+(i+1)+'</td><td onclick="openObjDetails(\''+o.id+'\')">'+
+      '<div class="obj-main">'+esc(o.address||o.name||'(без названия)')+'</div>'+
+      (o.name&&o.address?'<div class="obj-sub">'+esc(o.name)+'</div>':'')+
+      '<div class="obj-sub">'+sub.join(' · ')+'</div></td>'+
+      '<td onclick="event.stopPropagation()"><button class="btn btn-sm" onclick="openObjDetails(\''+o.id+'\')">👁 Детали</button>'+
+      '<button class="btn btn-sm btn-danger" onclick="delObject(\''+o.id+'\')"></button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   СОТРУДНИКИ
+============================================================ */
+function addEmployee(){
+  const n=document.getElementById('empName').value.trim();
+  if(!n){ alert('Введите ФИО'); return; }
+  DATA.employees.push({id:uid(), name:n, pos:document.getElementById('empPos').value.trim(), objectId:null});
+  document.getElementById('empName').value=''; document.getElementById('empPos').value='';
+  save(); render();
+}
+function editEmployee(id){
+  const e=DATA.employees.find(function(x){return x.id===id;}); if(!e) return;
+  openModal('Редактировать сотрудника',[{k:'name',l:'ФИО',v:e.name},{k:'pos',l:'Должность',v:e.pos||''}],function(vals){ e.name=vals.name; e.pos=vals.pos; save(); render(); });
+}
+function delEmployee(id){
+  if(!confirm('Удалить сотрудника?')) return;
+  DATA.employees=DATA.employees.filter(function(x){return x.id!==id;});
+  save(); render();
+}
+function renderEmployees(){
+  const tb=document.querySelector('#tblEmployees tbody'); tb.innerHTML='';
+  if(!DATA.employees.length){ tb.innerHTML='<tr><td colspan="5" class="empty">Нет сотрудников</td></tr>'; return; }
+  DATA.employees.forEach(function(e,i){
+    const o=getEmpObj(e);
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+(i+1)+'</td><td>'+esc(e.name)+'</td><td>'+esc(e.pos||'')+'</td>'+
+      '<td>'+(o?esc(objShortLabel(o)):'<span style="color:#999">—</span>')+'</td>'+
+      '<td><button class="btn btn-sm" onclick="editEmployee(\''+e.id+'\')">✏️</button>'+
+      '<button class="btn btn-sm btn-danger" onclick="delEmployee(\''+e.id+'\')"></button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   ПРИВЯЗКИ
+============================================================ */
+function fillLinkSelects(){
+  document.getElementById('linkEmp').innerHTML='<option value="">— сотрудник —</option>'+DATA.employees.map(function(e){return '<option value="'+e.id+'">'+esc(e.name)+'</option>';}).join('');
+  document.getElementById('linkObj').innerHTML='<option value="">— без объекта —</option>'+DATA.objects.map(function(o){return '<option value="'+o.id+'">'+esc(objShortLabel(o))+'</option>';}).join('');
+}
+function setLink(){
+  const eid=document.getElementById('linkEmp').value, oid=document.getElementById('linkObj').value||null;
+  if(!eid){ alert('Выберите сотрудника'); return; }
+  const e=DATA.employees.find(function(x){return x.id===eid;}); if(!e) return;
+  e.objectId=oid; save(); render(); alert('Привязка обновлена');
+}
+function unlinkEmp(id){ const e=DATA.employees.find(function(x){return x.id===id;}); if(!e) return; e.objectId=null; save(); render(); }
+function renderLinks(){
+  fillLinkSelects();
+  const tb=document.querySelector('#tblLinks tbody'); tb.innerHTML='';
+  const linked=DATA.employees.filter(function(e){return e.objectId;});
+  if(!linked.length){ tb.innerHTML='<tr><td colspan="3" class="empty">Нет привязок</td></tr>'; return; }
+  linked.forEach(function(e){
+    const o=getEmpObj(e);
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+esc(e.name)+'</td><td>'+(o?esc(objShortLabel(o)):'')+'</td>'+
+      '<td><button class="btn btn-sm btn-danger" onclick="unlinkEmp(\''+e.id+'\')">✂ Открепить</button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   СКЛАД
+============================================================ */
+function addPart(){
+  const n=document.getElementById('partName').value.trim();
+  if(!n){ alert('Введите название'); return; }
+  DATA.parts.push({id:uid(), name:n, partNumber:document.getElementById('partNumber').value.trim(), qty:parseInt(document.getElementById('partQty').value)||0});
+  document.getElementById('partName').value=''; document.getElementById('partNumber').value=''; document.getElementById('partQty').value='1';
+  save(); render();
+}
+function editPart(id){
+  const p=DATA.parts.find(function(x){return x.id===id;}); if(!p) return;
+  openModal('Редактировать запчасть',[{k:'name',l:'Название',v:p.name},{k:'partNumber',l:'Номер детали',v:p.partNumber||''},{k:'qty',l:'Количество',v:p.qty,type:'number'}],function(vals){ p.name=vals.name; p.partNumber=vals.partNumber; p.qty=parseInt(vals.qty)||0; save(); render(); });
+}
+function delPart(id){
+  if(!confirm('Удалить?')) return;
+  DATA.parts=DATA.parts.filter(function(x){return x.id!==id;}); save(); render();
+}
+function renderParts(){
+  const tb=document.querySelector('#tblParts tbody'); tb.innerHTML='';
+  if(!DATA.parts.length){ tb.innerHTML='<tr><td colspan="4" class="empty">Склад пуст</td></tr>'; return; }
+  DATA.parts.forEach(function(p){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+esc(p.name)+'</td><td>'+esc(p.partNumber||'')+'</td><td>'+p.qty+'</td>'+
+      '<td><button class="btn btn-sm" onclick="editPart(\''+p.id+'\')">✏️</button>'+
+      '<button class="btn btn-sm btn-danger" onclick="delPart(\''+p.id+'\')">🗑</button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   ФОТО
+============================================================ */
+function compressImage(file,maxW,maxH,quality){
+  maxW=maxW||800; maxH=maxH||600; quality=quality||0.8;
+  return new Promise(function(resolve,reject){
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const img=new Image();
+      img.onload=function(){
+        let w=img.width,h=img.height;
+        const r=Math.min(maxW/w,maxH/h,1);
+        w=Math.round(w*r); h=Math.round(h*r);
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=reject; img.src=e.target.result;
+    };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
+async function handlePhotoFiles(files){
+  const rem=7-pendingPhotos.length;
+  if(files.length>rem){ alert('Максимум 7 фото. Добавится '+rem); files=files.slice(0,rem); }
+  if(!files.length) return;
+  for(const f of files){ try{ pendingPhotos.push(await compressImage(f)); } catch(err){ alert('Ошибка: '+f.name); } }
+  renderPhotoPreview();
+}
+document.getElementById('issPhotosCamera').addEventListener('change', async function(e){ await handlePhotoFiles(Array.from(e.target.files)); e.target.value=''; });
+document.getElementById('issPhotosGallery').addEventListener('change', async function(e){ await handlePhotoFiles(Array.from(e.target.files)); e.target.value=''; });
+function renderPhotoPreview(){
+  const box=document.getElementById('photoPreview'); box.innerHTML='';
+  if(!pendingPhotos.length) return;
+  pendingPhotos.forEach(function(p,i){
+    const w=document.createElement('div'); w.className='thumb-preview';
+    w.innerHTML='<img src="'+p+'"><button class="rm" onclick="removePendingPhoto('+i+')">×</button>';
+    box.appendChild(w);
+  });
+}
+function removePendingPhoto(i){ pendingPhotos.splice(i,1); renderPhotoPreview(); }
+
+/* ============================================================
+   ВЫДАЧИ
+============================================================ */
+function getLiftsByEmployee(empId){
+  const emp = DATA.employees.find(function(x){return x.id===empId;});
+  if(!emp || !emp.objectId) return [];
+  const obj = DATA.objects.find(function(x){return x.id===emp.objectId;});
+  if(!obj) return [];
+  const lifts = [];
+  (obj.buildings||[]).forEach(function(b){ b.lifts.forEach(function(l){ lifts.push({lift:l, building:b, object:obj}); }); });
+  return lifts;
+}
+function updateLiftSelectByEmployee(empId){
+  const liftSelect = document.getElementById('issLift');
+  const empInfo = document.getElementById('empObjectInfo');
+  if(!empId){ liftSelect.innerHTML = '<option value="">— сначала выберите сотрудника —</option>'; empInfo.classList.remove('show'); return; }
+  const emp = DATA.employees.find(function(x){return x.id===empId;});
+  const lifts = getLiftsByEmployee(empId);
+  if(emp && emp.objectId){
+    const obj = DATA.objects.find(function(x){return x.id===emp.objectId;});
+    if(obj){
+      empInfo.innerHTML = '📍 <b>Объект:</b> ' + esc(objShortLabel(obj)) + (lifts.length ? ' | 🛗 <b>Лифтов:</b> ' + lifts.length : ' | ⚠️ <b>Нет лифтов</b>');
+      empInfo.classList.add('show');
+    }
+  } else {
+    empInfo.innerHTML = '⚠️ Сотрудник не привязан к объекту. Привяжите его во вкладке «🔗 Привязки».';
+    empInfo.classList.add('show');
+  }
+  let opts = '<option value="">— выберите лифт —</option>';
+  if(lifts.length === 0) opts = '<option value="">— нет доступных лифтов —</option>';
+  else lifts.forEach(function(item){ opts += '<option value="'+item.lift.id+'">'+esc(liftLabel(item.lift, item.building, item.object))+'</option>'; });
+  liftSelect.innerHTML = opts;
+}
+function fillIssueSelects(){
+  document.getElementById('issPart').innerHTML='<option value="">— запчасть —</option>'+DATA.parts.filter(function(p){return p.qty>0;}).map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+(p.partNumber?' ['+esc(p.partNumber)+']':'')+' (ост: '+p.qty+')</option>';}).join('');
+  document.getElementById('issEmp').innerHTML='<option value="">— сотрудник —</option>'+DATA.employees.map(function(e){return '<option value="'+e.id+'">'+esc(e.name)+'</option>';}).join('');
+  updateLiftSelectByEmployee(null);
+}
+document.getElementById('issEmp').addEventListener('change', function(e){ updateLiftSelectByEmployee(e.target.value); });
+function addIssue(){
+  const pid=document.getElementById('issPart').value, eid=document.getElementById('issEmp').value, lid=document.getElementById('issLift').value, st=document.getElementById('issStatus').value;
+  if(!pid||!eid){ alert('Выберите запчасть и сотрудника'); return; }
+  if(!lid){ if(!confirm('Лифт не выбран. Продолжить?')) return; }
+  const p=DATA.parts.find(function(x){return x.id===pid;});
+  if(p.qty<=0){ alert('Нет в наличии'); return; }
+  p.qty--;
+  DATA.issues.push({id:uid(), date:new Date().toISOString(), partId:pid, empId:eid, liftId:lid||null, status:st, photos:pendingPhotos.slice()});
+  pendingPhotos=[]; renderPhotoPreview(); save(); render();
+}
+function delIssue(id){
+  if(!confirm('Удалить?')) return;
+  const iss=DATA.issues.find(function(x){return x.id===id;}); if(!iss) return;
+  const p=DATA.parts.find(function(x){return x.id===iss.partId;}); if(p) p.qty++;
+  DATA.issues=DATA.issues.filter(function(x){return x.id!==id;}); save(); render();
+}
+function statusLabel(s){
+  return s==='returned'?'<span class="badge badge-ok">Вернул</span>':s==='not_returned'?'<span class="badge badge-no">Не вернул</span>':'<span class="badge badge-wait">Нет сломанной</span>';
+}
+function renderIssues(){
+  fillIssueSelects();
+  const tb=document.querySelector('#tblIssues tbody'); tb.innerHTML='';
+  if(!DATA.issues.length){ tb.innerHTML='<tr><td colspan="8" class="empty">Нет выдач</td></tr>'; return; }
+  DATA.issues.slice().reverse().forEach(function(iss){
+    const p=DATA.parts.find(function(x){return x.id===iss.partId;});
+    const e=DATA.employees.find(function(x){return x.id===iss.empId;});
+    const lf=iss.liftId?findLift(iss.liftId):null;
+    const liftText=lf?esc(liftLabel(lf.lift,lf.building,lf.object)):'<span style="color:#999">—</span>';
+    const ph=(iss.photos||[]).map(function(p,i){return '<img src="'+p+'" onclick="showPhoto(\''+iss.id+'\','+i+')">';}).join('');
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+new Date(iss.date).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})+'</td>'+
+      '<td>'+esc(p?p.name:'?')+'</td><td>'+esc(p&&p.partNumber?p.partNumber:'')+'</td>'+
+      '<td>'+esc(e?e.name:'?')+'</td><td style="font-size:12px">'+liftText+'</td>'+
+      '<td>'+statusLabel(iss.status)+'</td>'+
+      '<td><div class="issue-photos">'+(ph||'—')+'</div>'+(ph?'<button class="btn btn-sm" onclick="downloadIssuePhotos(\''+iss.id+'\')" style="margin-top:4px">💾</button>':'')+'</td>'+
+      '<td><button class="btn btn-sm btn-danger" onclick="delIssue(\''+iss.id+'\')">🗑</button></td>';
+    tb.appendChild(tr);
+  });
+}
+function showPhoto(issueId,idx){ const iss=DATA.issues.find(function(x){return x.id===issueId;}); if(!iss||!iss.photos[idx]) return; document.getElementById('photoView').src=iss.photos[idx]; document.getElementById('photoModal').classList.add('show'); }
+function closePhotoModal(){ document.getElementById('photoModal').classList.remove('show'); }
+
+/* ============================================================
+   СКАЧИВАНИЕ ФОТО
+============================================================ */
+function dataURLtoBlob(d){ const parts=d.split(','); const mime=parts[0].match(/:(.*?);/)[1]; const bin=atob(parts[1]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new Blob([a],{type:mime}); }
+function downloadIssuePhotos(issueId){
+  const iss=DATA.issues.find(function(x){return x.id===issueId;}); if(!iss) return;
+  const p=DATA.parts.find(function(x){return x.id===iss.partId;});
+  const e=DATA.employees.find(function(x){return x.id===iss.empId;});
+  (iss.photos||[]).forEach(function(ph,i){ const a=document.createElement('a'); a.href=ph; a.download=((p?p.name:'d').replace(/[^a-zA-Zа-яА-Я0-9_-]/g,'_'))+'_'+((e?e.name:'e').replace(/[^a-zA-Zа-яА-Я0-9_-]/g,'_'))+'_'+(i+1)+'.jpg'; a.click(); });
+}
+async function buildPhotosZip(){
+  const all=[];
+  DATA.issues.forEach(function(iss){
+    const p=DATA.parts.find(function(x){return x.id===iss.partId;});
+    const e=DATA.employees.find(function(x){return x.id===iss.empId;});
+    (iss.photos||[]).forEach(function(ph,i){ all.push({data:ph, name:((p?p.name:'d').replace(/[^a-zA-Zа-яА-Я0-9_-]/g,'_'))+'_'+((e?e.name:'e').replace(/[^a-zA-Zа-яА-Я0-9_-]/g,'_'))+'_'+(i+1)+'.jpg'}); });
+  });
+  if(!all.length) return null;
+  const zip=new JSZip(); all.forEach(function(p){zip.file(p.name,dataURLtoBlob(p.data));});
+  return await zip.generateAsync({type:'blob'});
+}
+async function downloadAllPhotos(){ const blob=await buildPhotosZip(); if(!blob){ alert('Нет фото'); return; } const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='photos_'+new Date().toISOString().slice(0,10)+'.zip'; a.click(); URL.revokeObjectURL(a.href); }
+async function uploadToYandexDisk(){
+  const blob=await buildPhotosZip();
+  if(!blob){ alert('Нет фото для загрузки'); return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); const fn='photos_'+new Date().toISOString().slice(0,10)+'.zip'; a.download=fn; a.click(); URL.revokeObjectURL(a.href);
+  setTimeout(function(){ window.open('https://disk.yandex.ru/client/disk/%D0%A1%D0%BA%D0%BB%D0%B0%D0%B4','_blank'); alert('✅ ZIP скачан: "'+fn+'"\n\n📂 Откроется папка на Яндекс.Диске.\nПеретащите ZIP в окно браузера.'); },500);
+}
+
+/* ============================================================
+   МОДАЛЬНОЕ ОКНО
+============================================================ */
+let modalCb=null;
+function openModal(title,fields,cb){
+  document.getElementById('modalTitle').textContent=title;
+  let html=''; fields.forEach(function(f){ html+='<label>'+f.l+'</label><input id="mf_'+f.k+'" type="'+(f.type||'text')+'" value="'+esc(String(f.v||''))+'">'; });
+  document.getElementById('modalBody').innerHTML=html;
+  modalCb=function(){ const v={}; fields.forEach(function(f){ v[f.k]=document.getElementById('mf_'+f.k).value; }); cb(v); };
+  document.getElementById('modal').classList.add('show');
+}
+function saveModal(){ if(modalCb){ modalCb(); modalCb=null; } closeModal(); }
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+/* ============================================================
+   РЕНДЕР
+============================================================ */
+function render(){ renderObjects(); renderEmployees(); renderLinks(); renderParts(); renderIssues(); updateSyncUI(); }
+
+/* ============================================================
+   ИМПОРТ/ЭКСПОРТ
+============================================================ */
+function importObjEmp(){
+  const f=document.getElementById('fileObjEmp').files[0]; if(!f){ alert('Выберите файл'); return; }
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      if(wb.SheetNames[0]){
+        const sh=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+        sh.forEach(function(row,i){
+          const name=String(row[0]||'').trim(), address=String(row[1]||'').trim();
+          if(!name&&!address) return; if(i===0&&/объект|название|object/i.test(name)) return;
+          const korpus=String(row[2]||'').trim(), liftName=String(row[3]||'').trim(), liftNumber=String(row[4]||'').trim();
+          let o=DATA.objects.find(function(x){return x.name===name&&x.address===address;});
+          if(!o){ o={id:uid(),name:name,address:address,buildings:[]}; DATA.objects.push(o); }
+          if(korpus||liftName||liftNumber){
+            let b=o.buildings.find(function(x){return x.name===korpus;});
+            if(!b){ b={id:uid(),name:korpus,lifts:[]}; o.buildings.push(b); }
+            if(liftName||liftNumber){ if(!b.lifts.some(function(l){return l.liftName===liftName&&l.liftNumber===liftNumber;})) b.lifts.push({id:uid(),liftName:liftName,liftNumber:liftNumber}); }
+          }
+        });
+      }
+      const sn=wb.SheetNames[1]||wb.SheetNames[0];
+      if(sn){
+        const sh=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+        sh.forEach(function(row,i){
+          const name=String(row[0]||'').trim(); if(!name) return; if(i===0&&/сотрудник|фио|employee/i.test(name)) return;
+          if(!DATA.employees.some(function(e){return e.name===name;})) DATA.employees.push({id:uid(),name:name,pos:String(row[1]||'').trim(),objectId:null});
+        });
+      }
+      save(); render(); alert('Импорт завершён. Объектов: '+DATA.objects.length+', сотрудников: '+DATA.employees.length);
+    }catch(err){ alert('Ошибка: '+err.message); }
+  };
+  r.readAsArrayBuffer(f);
+}
+function importParts(){
+  const f=document.getElementById('fileParts').files[0]; if(!f){ alert('Выберите файл'); return; }
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      let sheetName = null; for(let i=0;i<wb.SheetNames.length;i++){ if(wb.SheetNames[i].toLowerCase().indexOf('склад')!==-1){ sheetName = wb.SheetNames[i]; break; } }
+      if(!sheetName) sheetName = wb.SheetNames[0];
+      const sh=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+      let added=0, updated=0;
+      sh.forEach(function(row,i){
+        const name=String(row[0]||'').trim(), partNumber=String(row[1]||'').trim(), qtyRaw=row[2];
+        if(i===0&&/название|детал|part/i.test(name)) return; if(!name&&!partNumber) return;
+        const qty = parseInt(qtyRaw)||0;
+        let p = null; if(partNumber) p = DATA.parts.find(function(x){return x.partNumber && x.partNumber===partNumber;});
+        if(!p) p = DATA.parts.find(function(x){return x.name===name;});
+        if(p){ if(!p.partNumber && partNumber) p.partNumber = partNumber; p.qty = qty; updated++; }
+        else { DATA.parts.push({id:uid(), name:name, partNumber:partNumber, qty:qty}); added++; }
+      });
+      save(); render(); alert('Импорт склада завершён!\nДобавлено: '+added+'\nОбновлено: '+updated);
+    }catch(err){ alert('Ошибка: '+err.message); }
+  };
+  r.readAsArrayBuffer(f);
+}
+function importStock(){
+  const f=document.getElementById('fileStock').files[0]; if(!f){ alert('Выберите файл'); return; }
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      let sheetName = null; for(let i=0;i<wb.SheetNames.length;i++){ if(wb.SheetNames[i].toLowerCase().indexOf('выдач')!==-1){ sheetName = wb.SheetNames[i]; break; } }
+      if(!sheetName) sheetName = wb.SheetNames[0];
+      const sh=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+      let added=0;
+      sh.forEach(function(row,i){
+        const partName=String(row[4]||'').trim(), partNumber=String(row[5]||'').trim(), empName=String(row[6]||'').trim(), statusText=String(row[7]||'').trim().toLowerCase();
+        if(!partName||!empName) return; if(i===0&&/дата|деталь|выдач/i.test(String(row[0]||''))) return;
+        let p=null; if(partNumber) p=DATA.parts.find(function(x){return x.partNumber&&x.partNumber===partNumber;});
+        if(!p) p=DATA.parts.find(function(x){return x.name===partName;});
+        if(!p){ p={id:uid(),name:partName,partNumber:partNumber,qty:0}; DATA.parts.push(p); }
+        p.qty++;
+        let em=DATA.employees.find(function(x){return x.name===empName;});
+        if(!em){ em={id:uid(),name:empName,pos:'',objectId:null}; DATA.employees.push(em); }
+        let st='no_broken'; if(/да|вернул|предоставил|yes/i.test(statusText)) st='returned'; else if(/нет|не вернул|не предоставил|no/i.test(statusText)) st='not_returned';
+        DATA.issues.push({id:uid(),date:new Date().toISOString(),partId:p.id,empId:em.id,liftId:null,status:st,photos:[]});
+        added++;
+      });
+      save(); render(); alert('Импортировано выдач: '+added);
+    }catch(err){ alert('Ошибка: '+err.message); }
+  };
+  r.readAsArrayBuffer(f);
+}
+function exportAll(){
+  const wb=XLSX.utils.book_new();
+  const shObj=[['Название','Адрес','Корпус','Название лифта','№ лифта']];
+  DATA.objects.forEach(function(o){ if(!o.buildings.length){ shObj.push([o.name,o.address||'','','','']); } else o.buildings.forEach(function(b){ if(!b.lifts.length) shObj.push([o.name,o.address||'',b.name||'','','']); else b.lifts.forEach(function(l){shObj.push([o.name,o.address||'',b.name||'',l.liftName||'',l.liftNumber||'']);}); }); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(shObj),'Объекты');
+  const shEmp=[['ФИО','Должность','Объект']].concat(DATA.employees.map(function(e){ const o=getEmpObj(e); return [e.name,e.pos||'',o?objShortLabel(o):'']; }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(shEmp),'Сотрудники');
+  const shLink=[['Сотрудник','Объект']].concat(DATA.employees.filter(function(e){return e.objectId;}).map(function(e){return [e.name,objShortLabel(getEmpObj(e))];}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(shLink),'Привязки');
+  const shPart=[['Название','№ детали','В наличии']].concat(DATA.parts.map(function(p){return [p.name,p.partNumber||'',p.qty];}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(shPart),'Склад');
+  const stMap={returned:'Вернул сломанную',not_returned:'Не вернул сломанную',no_broken:'Не было сломанной'};
+  const shIss=[['Дата','Объект','Корпус','Лифт','Деталь','№ детали','Сотрудник','Статус','Фото']].concat(DATA.issues.map(function(iss){
+    const p=DATA.parts.find(function(x){return x.id===iss.partId;}); const e=DATA.employees.find(function(x){return x.id===iss.empId;});
+    const empObj=e?getEmpObj(e):null; const lf=iss.liftId?findLift(iss.liftId):null;
+    return [new Date(iss.date).toLocaleString('ru-RU'), lf?objShortLabel(lf.object):(empObj?objShortLabel(empObj):''), lf&&lf.building?lf.building.name:'', lf?liftLabel(lf.lift,lf.building,lf.object):'', p?p.name:'',p&&p.partNumber?p.partNumber:'', e?e.name:'',stMap[iss.status]||iss.status,(iss.photos||[]).length];
+  }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(shIss),'Выдачи');
+  XLSX.writeFile(wb,'uchet_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function saveToFile(){
+  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const json = JSON.stringify(DATA);
+  const safeJson = json.replace(/<\//g, '<\\/');
+  const newScript = '<script id="app-data-embed">window.APP_DATA_EMBEDDED=' + safeJson + ';<\/script>';
+  const re = /<script\s+id=["']app-data-embed["'][^>]*>[\s\S]*?<\/script>/i;
+  if (re.test(html)) html = html.replace(re, newScript); else html = html.replace(/<\/head>/i, newScript + '\n</head>');
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'uchet_' + new Date().toISOString().slice(0,10) + '.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href);
+  const status = document.getElementById('saveStatus');
+  if (status){
+    const photoCount = DATA.issues.reduce(function(s,i){return s+(i.photos?i.photos.length:0);},0);
+    status.innerHTML = '✅ Файл сохранён!<br>📊 Объектов: <b>'+DATA.objects.length+'</b> · Сотрудников: <b>'+DATA.employees.length+'</b> · Выдач: <b>'+DATA.issues.length+'</b> · Фото: <b>'+photoCount+'</b>';
+    setTimeout(function(){ if(status) status.innerHTML=''; }, 8000);
+  }
+}
+function clearAll(){ if(!confirm('Удалить ВСЕ данные?')) return; DATA={objects:[],employees:[],parts:[],issues:[]}; localStorage.removeItem('appData_v5'); render(); }
+
 /* ============================================================
    ☁️ СИНХРОНИЗАЦИЯ С ЯНДЕКС.ДИСКОМ (OAuth 2.0 PKCE + REST API)
 ============================================================ */
@@ -16,6 +960,14 @@ let yandexSettings = {
   userName: localStorage.getItem('yandex_user_name') || ''
 };
 
+function ensureToken(){
+  if (!yandexSettings.accessToken) yandexSettings.accessToken = localStorage.getItem('yandex_access_token') || '';
+  if (!yandexSettings.refreshToken) yandexSettings.refreshToken = localStorage.getItem('yandex_refresh_token') || '';
+  if (!yandexSettings.tokenExpires || yandexSettings.tokenExpires === 0) yandexSettings.tokenExpires = parseInt(localStorage.getItem('yandex_token_expires') || '0');
+  if (!yandexSettings.userName) yandexSettings.userName = localStorage.getItem('yandex_user_name') || '';
+  return !!yandexSettings.accessToken;
+}
+
 function saveYandexSettings(){
   yandexSettings.clientId = document.getElementById('yandexClientId').value.trim();
   yandexSettings.redirectUri = document.getElementById('yandexRedirectUri').value.trim();
@@ -32,13 +984,14 @@ function loadYandexSettingsToForm(){
 
 function setSyncStatus(type, message){
   const box = document.getElementById('syncStatusBox');
-  box.className = 'sync-status ' + type;
-  box.innerHTML = message;
+  if (box){ box.className = 'sync-status ' + type; box.innerHTML = message; }
 }
 
 function updateSyncUI(){
+  ensureToken();
   loadYandexSettingsToForm();
   const actions = document.getElementById('syncActions');
+  if (!actions) return;
   const isAuth = !!yandexSettings.accessToken;
   if (isAuth){
     actions.style.display = 'block';
@@ -78,13 +1031,10 @@ function base64UrlEncode(buffer){
 async function startYandexAuth(){
   if (!yandexSettings.clientId){ alert('❌ Сначала введите Client ID в настройках'); return; }
   if (!yandexSettings.redirectUri){ alert('❌ Сначала укажите Redirect URI'); return; }
-  
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
-  
   sessionStorage.setItem('yandex_code_verifier', codeVerifier);
   sessionStorage.setItem('yandex_state', Math.random().toString(36).slice(2));
-  
   const authUrl = YANDEX_AUTH_URL + '?' + new URLSearchParams({
     response_type: 'code',
     client_id: yandexSettings.clientId,
@@ -94,18 +1044,19 @@ async function startYandexAuth(){
     state: sessionStorage.getItem('yandex_state'),
     force_confirm: 'yes'
   }).toString();
-  
+  console.log('Авторизация URL:', authUrl);
   window.location.href = authUrl;
 }
 
 async function exchangeCodeForToken(code){
-  setSyncStatus('wait', '⏳ Получение токена...');
+  console.log('Обмен кода на токен...');
+  setSyncStatus('wait', ' Получение токена...');
   const codeVerifier = sessionStorage.getItem('yandex_code_verifier');
   if (!codeVerifier){
+    console.error('code_verifier не найден в sessionStorage');
     setSyncStatus('err', '❌ code_verifier не найден. Попробуйте авторизоваться снова.');
     return;
   }
-  
   try {
     const formData = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -114,24 +1065,22 @@ async function exchangeCodeForToken(code){
       code_verifier: codeVerifier,
       redirect_uri: yandexSettings.redirectUri
     });
-    
+    console.log('Отправка запроса на получение токена...');
     const resp = await fetch(YANDEX_TOKEN_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: formData.toString()
     });
-    
     const data = await resp.json();
-    
+    console.log('Ответ от Яндекс:', data);
     if (data.access_token){
       yandexSettings.accessToken = data.access_token;
       yandexSettings.refreshToken = data.refresh_token || '';
       yandexSettings.tokenExpires = Date.now() + (data.expires_in || 3600) * 1000;
-      
       localStorage.setItem('yandex_access_token', yandexSettings.accessToken);
       localStorage.setItem('yandex_refresh_token', yandexSettings.refreshToken);
       localStorage.setItem('yandex_token_expires', yandexSettings.tokenExpires.toString());
-      
+      console.log('Токен сохранен в localStorage');
       try {
         const userResp = await fetch('https://login.yandex.ru/info?format=json', {
           headers: {'Authorization': 'OAuth ' + yandexSettings.accessToken}
@@ -141,23 +1090,24 @@ async function exchangeCodeForToken(code){
           yandexSettings.userName = userData.display_name || userData.login;
           localStorage.setItem('yandex_user_name', yandexSettings.userName);
         }
-      } catch(e){}
-      
+      } catch(e){ console.warn('Не удалось получить имя пользователя:', e); }
       sessionStorage.removeItem('yandex_code_verifier');
       sessionStorage.removeItem('yandex_state');
-      
       setSyncStatus('ok', '✅ Авторизация успешна! Токен получен.');
       updateSyncUI();
       alert('✅ Авторизация прошла успешно! Теперь вы можете загружать и скачивать данные.');
     } else {
+      console.error('Ошибка получения токена:', data);
       setSyncStatus('err', '❌ Ошибка получения токена: ' + (data.error_description || data.error || 'неизвестно'));
     }
   } catch(err){
+    console.error('Ошибка сети:', err);
     setSyncStatus('err', '❌ Ошибка сети: ' + err.message);
   }
 }
 
 async function refreshYandexToken(){
+  console.log('Обновление токена...');
   if (!yandexSettings.refreshToken){
     alert('❌ Refresh token отсутствует. Авторизуйтесь заново.');
     startYandexAuth();
@@ -189,7 +1139,7 @@ async function refreshYandexToken(){
       setSyncStatus('err', '❌ Не удалось обновить токен: ' + (data.error_description || data.error));
     }
   } catch(err){
-    setSyncStatus('err', '❌ Ошибка: ' + err.message);
+    setSyncStatus('err', ' Ошибка: ' + err.message);
   }
 }
 
@@ -224,109 +1174,90 @@ function applyManualToken(){
   updateSyncUI();
 }
 
-// ЗАГРУЗКА ДАННЫХ НА ЯНДЕКС.ДИСК
 async function uploadToYandex(){
-  if (!yandexSettings.accessToken){ 
-    alert('❌ Не авторизованы. Сначала авторизуйтесь через Яндекс.'); 
-    return; 
+  console.log('Начало загрузки на Яндекс.Диск...');
+  ensureToken();
+  if (!yandexSettings.accessToken){
+    console.error('Токен не найден');
+    alert(' Не авторизованы. Сначала авторизуйтесь через Яндекс.');
+    return;
   }
-  
   setSyncStatus('wait', '⏳ Загрузка на Яндекс.Диск...');
   const log = document.getElementById('syncLog');
-  log.textContent = '📤 Подготовка данных...';
-  
+  if (log) log.textContent = '📤 Подготовка данных...';
   try {
-    // Проверяем/обновляем токен если истёк
     if (Date.now() > yandexSettings.tokenExpires && yandexSettings.refreshToken){
-      log.textContent = '🔄 Токен истёк, обновляю...';
+      console.log('Токен истёк, обновляю...');
+      if (log) log.textContent = '🔄 Токен истёк, обновляю...';
       await refreshYandexToken();
       if (!yandexSettings.accessToken) throw new Error('Не удалось обновить токен');
     }
-    
-    // 1. Получаем ссылку для загрузки файла
-    log.textContent = ' Получаю ссылку для загрузки...';
+    console.log('Получаю ссылку для загрузки...');
+    if (log) log.textContent = '📤 Получаю ссылку для загрузки...';
     const uploadUrl = YANDEX_DISK_API + '/resources/upload?path=' + encodeURIComponent('/' + SYNC_FILE_PATH) + '&overwrite=true';
-    
     const uploadResp = await fetch(uploadUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': 'OAuth ' + yandexSettings.accessToken,
-        'Content-Type': 'application/json'
-      }
+      headers: {'Authorization': 'OAuth ' + yandexSettings.accessToken}
     });
-    
+    console.log('Ответ на запрос ссылки:', uploadResp.status);
     if (!uploadResp.ok){
       const errorText = await uploadResp.text();
       throw new Error('Ошибка получения ссылки: ' + uploadResp.status + ' ' + errorText);
     }
-    
     const uploadData = await uploadResp.json();
-    if (!uploadData.href){
-      throw new Error('Яндекс не вернул ссылку для загрузки');
-    }
-    
-    // 2. Загружаем файл по полученной ссылке
-    log.textContent = '📤 Загружаю файл (' + Math.round(JSON.stringify(DATA).length / 1024) + ' КБ)...';
-    
+    console.log('Ссылка для загрузки получена:', uploadData.href);
+    if (!uploadData.href) throw new Error('Яндекс не вернул ссылку для загрузки');
+    console.log('Загружаю файл...');
+    if (log) log.textContent = '📤 Загружаю файл (' + Math.round(JSON.stringify(DATA).length / 1024) + ' КБ)...';
     const putResp = await fetch(uploadData.href, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(DATA)
     });
-    
+    console.log('Ответ на загрузку файла:', putResp.status);
     if (!putResp.ok && putResp.status !== 201 && putResp.status !== 204){
       const errorText = await putResp.text();
       throw new Error('Ошибка загрузки файла: ' + putResp.status + ' ' + errorText);
     }
-    
-    // Успешно загружено!
-    log.textContent = '✅ Файл загружен в /' + SYNC_FILE_PATH + ' (' + new Date().toLocaleString('ru-RU') + ')';
+    console.log('Файл успешно загружен!');
+    if (log) log.textContent = '✅ Файл загружен в /' + SYNC_FILE_PATH + ' (' + new Date().toLocaleString('ru-RU') + ')';
     setSyncStatus('ok', '✅ Загрузка завершена успешно!');
     alert('✅ Данные успешно загружены на Яндекс.Диск!\n\nФайл: /' + SYNC_FILE_PATH + '\nТеперь вы можете скачать их с любого устройства.');
-    
   } catch(err){
-    log.textContent = '❌ Ошибка: ' + err.message;
+    console.error('Ошибка загрузки:', err);
+    if (log) log.textContent = '❌ Ошибка: ' + err.message;
     setSyncStatus('err', '❌ Ошибка загрузки: ' + err.message);
     alert('❌ Не удалось загрузить данные:\n' + err.message);
   }
 }
 
-// СКАЧИВАНИЕ ДАННЫХ С ЯНДЕКС.ДИСКА
 async function downloadFromYandex(){
-  if (!yandexSettings.accessToken){ 
-    alert(' Не авторизованы. Сначала авторизуйтесь через Яндекс.'); 
-    return; 
-  }
-  
-  if (!confirm('Скачать данные с Яндекс.Диска?\n\n⚠️ Все текущие данные будут ЗАМЕНЕНЫ данными из облака.')) {
+  console.log('Начало скачивания с Яндекс.Диска...');
+  ensureToken();
+  if (!yandexSettings.accessToken){
+    console.error('Токен не найден');
+    alert('❌ Не авторизованы. Сначала авторизуйтесь через Яндекс.');
     return;
   }
-  
+  if (!confirm('Скачать данные с Яндекс.Диска?\n\n⚠️ Все текущие данные будут ЗАМЕНЕНЫ данными из облака.')) return;
   setSyncStatus('wait', '⏳ Скачивание с Яндекс.Диска...');
   const log = document.getElementById('syncLog');
-  log.textContent = '📥 Поиск файла на Яндекс.Диске...';
-  
+  if (log) log.textContent = '📥 Поиск файла на Яндекс.Диске...';
   try {
-    // Проверяем/обновляем токен если истёк
     if (Date.now() > yandexSettings.tokenExpires && yandexSettings.refreshToken){
-      log.textContent = '🔄 Токен истёк, обновляю...';
+      console.log('Токен истёк, обновляю...');
+      if (log) log.textContent = '🔄 Токен истёк, обновляю...';
       await refreshYandexToken();
       if (!yandexSettings.accessToken) throw new Error('Не удалось обновить токен');
     }
-    
-    // 1. Получаем ссылку для скачивания файла
-    log.textContent = ' Получаю ссылку для скачивания...';
+    console.log('Получаю ссылку для скачивания...');
+    if (log) log.textContent = '📥 Получаю ссылку для скачивания...';
     const downloadUrl = YANDEX_DISK_API + '/resources/download?path=' + encodeURIComponent('/' + SYNC_FILE_PATH);
-    
     const downloadResp = await fetch(downloadUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': 'OAuth ' + yandexSettings.accessToken
-      }
+      headers: {'Authorization': 'OAuth ' + yandexSettings.accessToken}
     });
-    
+    console.log('Ответ на запрос ссылки:', downloadResp.status);
     if (!downloadResp.ok){
       if (downloadResp.status === 404){
         throw new Error('Файл /' + SYNC_FILE_PATH + ' не найден на Яндекс.Диске. Сначала загрузите данные кнопкой "Загрузить на Яндекс.Диск"');
@@ -334,99 +1265,86 @@ async function downloadFromYandex(){
       const errorText = await downloadResp.text();
       throw new Error('Ошибка получения ссылки: ' + downloadResp.status + ' ' + errorText);
     }
-    
     const downloadData = await downloadResp.json();
-    if (!downloadData.href){
-      throw new Error('Яндекс не вернул ссылку для скачивания');
-    }
-    
-    // 2. Скачиваем файл по ссылке
-    log.textContent = ' Скачиваю файл...';
-    
+    console.log('Ссылка для скачивания получена:', downloadData.href);
+    if (!downloadData.href) throw new Error('Яндекс не вернул ссылку для скачивания');
+    console.log('Скачиваю файл...');
+    if (log) log.textContent = '📥 Скачиваю файл...';
     const fileResp = await fetch(downloadData.href);
-    if (!fileResp.ok){
-      throw new Error('Ошибка скачивания файла: ' + fileResp.status);
-    }
-    
+    if (!fileResp.ok) throw new Error('Ошибка скачивания файла: ' + fileResp.status);
     const jsonData = await fileResp.json();
-    
-    // 3. Проверяем структуру данных
+    console.log('Файл скачан, размер:', JSON.stringify(jsonData).length);
     if (!jsonData.objects || !jsonData.employees || !jsonData.parts || !jsonData.issues){
       throw new Error('Файл имеет неверную структуру. Это не файл синхронизации программы.');
     }
-    
-    // 4. Заменяем текущие данные на скачанные
     DATA = {
       objects: jsonData.objects || [],
       employees: jsonData.employees || [],
       parts: jsonData.parts || [],
       issues: jsonData.issues || []
     };
-    
-    // Мигрируем данные если нужно
     migrate();
-    
-    // Сохраняем локально
     save();
-    
-    // Обновляем интерфейс
     render();
-    
-    log.textContent = '✅ Данные скачаны и загружены (' + new Date().toLocaleString('ru-RU') + ')';
+    console.log('Данные успешно загружены!');
+    if (log) log.textContent = '✅ Данные скачаны и загружены (' + new Date().toLocaleString('ru-RU') + ')';
     setSyncStatus('ok', '✅ Скачивание завершено. Данные обновлены.');
-    
-    alert('✅ Данные успешно загружены с Яндекс.Диска!\n\n📊 Загружено:\n• Объектов: ' + DATA.objects.length + 
-          '\n• Сотрудников: ' + DATA.employees.length + 
-          '\n• Запчастей: ' + DATA.parts.length +
-          '\n• Выдач: ' + DATA.issues.length);
-    
+    alert('✅ Данные успешно загружены с Яндекс.Диска!\n\n📊 Загружено:\n• Объектов: ' + DATA.objects.length + '\n• Сотрудников: ' + DATA.employees.length + '\n• Запчастей: ' + DATA.parts.length + '\n• Выдач: ' + DATA.issues.length);
   } catch(err){
-    log.textContent = '❌ Ошибка: ' + err.message;
+    console.error('Ошибка скачивания:', err);
+    if (log) log.textContent = '❌ Ошибка: ' + err.message;
     setSyncStatus('err', '❌ Ошибка скачивания: ' + err.message);
     alert('❌ Не удалось скачать данные:\n' + err.message);
   }
 }
 
-// ДВУСТОРОННЯЯ СИНХРОНИЗАЦИЯ
 async function syncBothWays(){
-  if (!yandexSettings.accessToken){ 
-    alert('❌ Не авторизованы. Сначала авторизуйтесь через Яндекс.'); 
-    return; 
-  }
-  
-  if (!confirm('Выполнить двустороннюю синхронизацию?\n\n1️⃣ Сначала загрузим текущие данные на Яндекс.Диск\n2️⃣ Затем скачаем данные с Яндекс.Диска (они заменят текущие)\n\n⚠️ Убедитесь, что хотите это сделать!')) {
-    return;
-  }
-  
+  console.log('Начало двусторонней синхронизации...');
+  ensureToken();
+  if (!yandexSettings.accessToken){ alert('❌ Не авторизованы. Сначала авторизуйтесь через Яндекс.'); return; }
+  if (!confirm('Выполнить двустороннюю синхронизацию?\n\n1️⃣ Сначала загрузим текущие данные на Яндекс.Диск\n2️⃣ Затем скачаем данные с Яндекс.Диска (они заменят текущие)\n\n⚠️ Убедитесь, что хотите это сделать!')) return;
   const log = document.getElementById('syncLog');
-  log.textContent = '🔄 Начинаю двустороннюю синхронизацию...';
-  
+  if (log) log.textContent = '🔄 Начинаю двустороннюю синхронизацию...';
   await uploadToYandex();
-  await new Promise(r => setTimeout(r, 1500)); // Ждём 1.5 секунды
+  await new Promise(r => setTimeout(r, 1500));
   await downloadFromYandex();
 }
 
-// Проверка кода авторизации при загрузке страницы
 function checkAuthCallback(){
+  console.log('Проверка callback авторизации...');
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('code');
   const state = urlParams.get('state');
   const error = urlParams.get('error');
-  
   if (code){
+    console.log('Найден код авторизации:', code);
     if (!state || state === sessionStorage.getItem('yandex_state')){
       exchangeCodeForToken(code);
-      // Убираем код из URL чтобы не дублировался при обновлении
       const newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     } else {
+      console.error('Несовпадение state');
       alert('❌ Ошибка: несовпадение state (возможна CSRF-атака)');
       const newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
   } else if (error){
+    console.error('Ошибка авторизации:', error);
     alert('❌ Ошибка авторизации: ' + error);
     const newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
     window.history.replaceState({}, document.title, newUrl);
+  } else {
+    console.log('Код авторизации не найден в URL');
   }
 }
+
+/* ============================================================
+   СТАРТ
+============================================================ */
+load();
+checkAuthCallback();
+render();
+</script>
+
+</body>
+</html>
