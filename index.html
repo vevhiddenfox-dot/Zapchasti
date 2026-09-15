@@ -120,12 +120,12 @@ tr:hover{background:#fafafa}
 
 <nav id="nav">
   <button data-tab="objects" class="active">🏢 Объекты</button>
-  <button data-tab="employees"> Сотрудники</button>
-  <button data-tab="links">🔗 Привязки</button>
+  <button data-tab="employees">👥 Сотрудники</button>
+  <button data-tab="links"> Привязки</button>
   <button data-tab="parts">🔧 Склад</button>
   <button data-tab="issues">📦 Выдачи</button>
   <button data-tab="sync">☁️ Синхронизация</button>
-  <button data-tab="io">📥 Импорт/Экспорт</button>
+  <button data-tab="io"> Импорт/Экспорт</button>
 </nav>
 
 <main>
@@ -220,32 +220,46 @@ tr:hover{background:#fafafa}
   <div class="card">
     <div id="syncStatusBox" class="sync-status info">⏳ Не подключено к Яндекс.Диску</div>
     
-    <div class="instruction-box">
-      <h4>📤 ШАГ 1. Загрузить данные на Яндекс.Диск:</h4>
-      <ol>
-        <li>Нажмите кнопку <b>"⬆️ Загрузить на Яндекс.Диск"</b> ниже</li>
-        <li>Данные сохранятся в файле <code>sklad_data.json</code> в корне вашего Яндекс.Диска</li>
-      </ol>
+    <div id="authSection">
+      <h3 style="margin-bottom:10px;color:#1976d2">🔐 Авторизация на Яндекс.Диске</h3>
+      <p class="hint" style="margin-bottom:10px">Нажмите кнопку ниже, чтобы авторизоваться и получить доступ к синхронизации:</p>
+      <button class="btn btn-yandex btn-block" onclick="startYandexAuth()" style="margin:10px 0">🔑 Авторизоваться через Яндекс</button>
+      <button class="btn btn-ghost btn-block" onclick="showManualToken()" style="margin:5px 0"> Ввести токен вручную</button>
+      <div id="manualTokenBlock" style="display:none;margin:10px 0;padding:10px;background:#f5f5f5;border-radius:6px">
+        <p class="hint">Если автоматическая авторизация не сработала, скопируйте токен из адресной строки после авторизации (параметр <code>access_token=...</code>) и вставьте его сюда:</p>
+        <input id="manualToken" placeholder="Вставьте access_token" style="margin:5px 0">
+        <button class="btn btn-sm" onclick="applyManualToken()">Применить токен</button>
+      </div>
     </div>
     
-    <div class="instruction-box">
-      <h4>📥 ШАГ 2. Скачать данные на другом устройстве:</h4>
-      <ol>
-        <li>Откройте <a href="https://disk.yandex.ru" target="_blank">disk.yandex.ru</a> в браузере</li>
-        <li>Войдите в свой аккаунт</li>
-        <li>Найдите файл <code>sklad_data.json</code></li>
-        <li>Нажмите на него → <b>Скачать</b></li>
-        <li>Вернитесь в эту программу</li>
-        <li>Нажмите <b>" Импорт JSON (после скачивания с диска)"</b> ниже</li>
-        <li>Выберите скачанный файл</li>
-      </ol>
+    <div id="syncSection" style="display:none">
+      <div class="instruction-box">
+        <h4>📤 ШАГ 1. Загрузить данные на Яндекс.Диск:</h4>
+        <ol>
+          <li>Нажмите кнопку <b>"⬆️ Загрузить на Яндекс.Диск"</b> ниже</li>
+          <li>Данные сохранятся в файле <code>sklad_data.json</code> в корне вашего Яндекс.Диска</li>
+        </ol>
+      </div>
+      
+      <div class="instruction-box">
+        <h4>📥 ШАГ 2. Скачать данные на другом устройстве:</h4>
+        <ol>
+          <li>Откройте <a href="https://disk.yandex.ru" target="_blank">disk.yandex.ru</a> в браузере</li>
+          <li>Войдите в свой аккаунт</li>
+          <li>Найдите файл <code>sklad_data.json</code></li>
+          <li>Нажмите на него → <b>Скачать</b></li>
+          <li>Вернитесь в эту программу</li>
+          <li>Нажмите <b>"📥 Импорт JSON (после скачивания с диска)"</b> ниже</li>
+          <li>Выберите скачанный файл</li>
+        </ol>
+      </div>
+      
+      <button class="btn btn-upload btn-block" id="btnUpload" onclick="uploadToYandex()">⬆️ Загрузить на Яндекс.Диск</button>
+      <button class="btn btn-import btn-block" onclick="importManual()"> Импорт JSON (после скачивания с диска)</button>
+      <button class="btn btn-export btn-block" onclick="exportJSON()">💾 Экспорт JSON (резервная копия)</button>
+      <button class="btn btn-export btn-block" onclick="exportCSV()">📊 Экспорт в CSV (Excel)</button>
+      <button class="btn btn-disconnect btn-block" onclick="logoutYandex()"> Отключить Яндекс.Диск</button>
     </div>
-    
-    <button class="btn btn-upload btn-block" id="btnUpload" onclick="uploadToYandex()">⬆️ Загрузить на Яндекс.Диск</button>
-    <button class="btn btn-import btn-block" onclick="importManual()">📥 Импорт JSON (после скачивания с диска)</button>
-    <button class="btn btn-export btn-block" onclick="exportJSON()">💾 Экспорт JSON (резервная копия)</button>
-    <button class="btn btn-export btn-block" onclick="exportCSV()">📊 Экспорт в CSV (Excel)</button>
-    <button class="btn btn-disconnect btn-block" onclick="logoutYandex()">🚫 Отключить Яндекс.Диск</button>
   </div>
 </section>
 
@@ -253,14 +267,14 @@ tr:hover{background:#fafafa}
   <div class="card">
     <h2>💾 Сохранение программы с данными</h2>
     <p class="hint">Скачается HTML-файл, в который вшиты все текущие данные и фото.</p>
-    <button class="btn btn-success" onclick="saveToFile()"> Сохранить файл с данными</button>
+    <button class="btn btn-success" onclick="saveToFile()">💾 Сохранить файл с данными</button>
     <p class="hint" id="saveStatus" style="margin-top:8px;color:#388e3c"></p>
   </div>
   <div class="card">
     <h2>📥 Загрузить объекты и сотрудников из Excel</h2>
     <p class="hint">Файл с двумя листами: Лист 1 «Объекты», Лист 2 «Сотрудники»</p>
     <input type="file" id="fileObjEmp" accept=".xlsx,.xls">
-    <button class="btn" onclick="importObjEmp()">📥 Загрузить</button>
+    <button class="btn" onclick="importObjEmp()"> Загрузить</button>
   </div>
   <div class="card">
     <h2>📥 Загрузить данные СКЛАДА из Excel</h2>
@@ -272,7 +286,7 @@ tr:hover{background:#fafafa}
     <h2>📥 Загрузить данные ВЫДАЧ из Excel</h2>
     <p class="hint">Вкладка «Выдачи»: A-I — Дата, Объект, Корпус, Лифт, Деталь, №, Сотрудник, Статус, Фото</p>
     <input type="file" id="fileStock" accept=".xlsx,.xls">
-    <button class="btn" onclick="importStock()">📥 Загрузить выдачи</button>
+    <button class="btn" onclick="importStock()"> Загрузить выдачи</button>
   </div>
   <div class="card">
     <h2>📤 Выгрузить данные в Excel</h2>
@@ -288,7 +302,7 @@ tr:hover{background:#fafafa}
     </div>
   </div>
   <div class="card">
-    <h2>⚠️ Очистка</h2>
+    <h2>️ Очистка</h2>
     <button class="btn btn-danger" onclick="clearAll()">🗑 Удалить все данные</button>
   </div>
 </section>
@@ -455,7 +469,7 @@ function renderObjModal(){
     '<div class="bld-toolbar">'+
       '<button class="btn btn-sm btn-success" onclick="addBuilding()">➕ Добавить корпус</button>'+
       '<button class="btn btn-sm btn-ghost" onclick="expandAllBuildings()">⬇ Развернуть все</button>'+
-      '<button class="btn btn-sm btn-ghost" onclick="collapseAllBuildings()"> Свернуть все</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="collapseAllBuildings()">⬆ Свернуть все</button>'+
     '</div><div id="om_buildings"></div>';
   renderBuildingsList();
 }
@@ -473,7 +487,7 @@ function renderBuildingsList(){
     html += '<details class="bld-block" '+(isOpen?'open':'')+' data-bid="'+b.id+'" ontoggle="onBuildingToggle(this)">'+
       '<summary onclick="event.stopPropagation()">'+
         '<span class="arrow">▶</span>'+
-        '<span class="bld-title"> <input value="'+esc(b.name||'')+'" placeholder="Название корпуса" oninput="currentObjEdit.buildings['+bi+'].name=this.value" onclick="event.stopPropagation()"></span>'+
+        '<span class="bld-title">🏢 <input value="'+esc(b.name||'')+'" placeholder="Название корпуса" oninput="currentObjEdit.buildings['+bi+'].name=this.value" onclick="event.stopPropagation()"></span>'+
         '<span class="bld-count">🛗 '+liftCount+' '+liftWord+'</span>'+
         '<button class="bld-del" onclick="event.stopPropagation();removeBuilding('+bi+')">🗑</button>'+
       '</summary><div class="bld-content">';
@@ -541,7 +555,7 @@ function renderObjects(){
   DATA.objects.forEach(function(o,i){
     const tr=document.createElement('tr'); tr.className='obj-row';
     const lc=countLifts(o), bc=o.buildings.length;
-    const sub=[]; if(bc) sub.push(' Корпусов: '+bc); sub.push(' Лифтов: '+lc);
+    const sub=[]; if(bc) sub.push('🏢 Корпусов: '+bc); sub.push('🛗 Лифтов: '+lc);
     tr.innerHTML='<td>'+(i+1)+'</td><td onclick="openObjDetails(\''+o.id+'\')">'+
       '<div class="obj-main">'+esc(o.address||o.name||'(без названия)')+'</div>'+
       (o.name&&o.address?'<div class="obj-sub">'+esc(o.name)+'</div>':'')+
@@ -577,7 +591,7 @@ function renderEmployees(){
     tr.innerHTML='<td>'+(i+1)+'</td><td>'+esc(e.name)+'</td><td>'+esc(e.pos||'')+'</td>'+
       '<td>'+(o?esc(objShortLabel(o)):'<span style="color:#999">—</span>')+'</td>'+
       '<td><button class="btn btn-sm" onclick="editEmployee(\''+e.id+'\')">✏️</button>'+
-      '<button class="btn btn-sm btn-danger" onclick="delEmployee(\''+e.id+'\')">🗑</button></td>';
+      '<button class="btn btn-sm btn-danger" onclick="delEmployee(\''+e.id+'\')"></button></td>';
     tb.appendChild(tr);
   });
 }
@@ -997,16 +1011,46 @@ function setSyncStatus(type, message){
 
 function updateSyncUI(){
   loadYandexToken();
+  const authSection = document.getElementById('authSection');
+  const syncSection = document.getElementById('syncSection');
+  const statusBox = document.getElementById('syncStatusBox');
+  
   if (yandexToken){
     const isExpired = isTokenExpired();
     if (isExpired){
-      setSyncStatus('err', '⚠️ Токен истёк. Нажмите "🚫 Отключить Яндекс.Диск" и авторизуйтесь заново.');
+      statusBox.className = 'sync-status err';
+      statusBox.innerHTML = '⚠️ Токен истёк. Нажмите "🚫 Отключить Яндекс.Диск" и авторизуйтесь заново.';
+      if (authSection) authSection.style.display = 'block';
+      if (syncSection) syncSection.style.display = 'none';
     } else {
-      setSyncStatus('ok', '✅ Подключено к Яндекс.Диску');
+      statusBox.className = 'sync-status ok';
+      statusBox.innerHTML = '✅ Подключено к Яндекс.Диску';
+      if (authSection) authSection.style.display = 'none';
+      if (syncSection) syncSection.style.display = 'block';
     }
   } else {
-    setSyncStatus('info', '⏳ Не подключено к Яндекс.Диску');
+    statusBox.className = 'sync-status info';
+    statusBox.innerHTML = '⏳ Не подключено к Яндекс.Диску';
+    if (authSection) authSection.style.display = 'block';
+    if (syncSection) syncSection.style.display = 'none';
   }
+}
+
+function showManualToken(){
+  const block = document.getElementById('manualTokenBlock');
+  block.style.display = block.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyManualToken(){
+  const token = document.getElementById('manualToken').value.trim();
+  if (!token){ alert('Введите токен'); return; }
+  yandexToken = token;
+  yandexTokenExpires = Date.now() + 3600 * 1000;
+  saveYandexToken();
+  document.getElementById('manualToken').value = '';
+  document.getElementById('manualTokenBlock').style.display = 'none';
+  updateSyncUI();
+  alert('✅ Токен применён');
 }
 
 function logoutYandex(){
@@ -1028,15 +1072,15 @@ async function uploadToYandex() {
   }
   const valid = await ensureValidToken();
   if (!valid){
-    alert(' Токен истёк. Пожалуйста, отключите Яндекс.Диск и авторизуйтесь заново.');
+    alert('❌ Токен истёк. Пожалуйста, отключите Яндекс.Диск и авторизуйтесь заново.');
     return;
   }
   const btn = document.getElementById('btnUpload');
   const original = btn.textContent;
-  btn.textContent = ' Загрузка...';
+  btn.textContent = '⏳ Загрузка...';
   btn.disabled = true;
   try {
-    console.log(' Загрузка на Яндекс.Диск...');
+    console.log('📤 Загрузка на Яндекс.Диск...');
     const uploadUrl = `https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(FILE_PATH)}&overwrite=true`;
     const resp = await fetch(uploadUrl, {
       method: 'GET',
